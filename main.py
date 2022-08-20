@@ -15,7 +15,7 @@ async def home(request: Request):
     return templates.TemplateResponse("/homepage.html", {"request": request})
 
 
-@app.get("/api/{cvrNumber}")
+@app.get("/api/v1/{cvrNumber}")
 def read_root(cvrNumber: int):
 
     return searchcvrAPI(cvrNumber)
