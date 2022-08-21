@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 3450
+    ports:
+      - "3450:3450"
