@@ -1,3 +1,9 @@
+# API CVR er nu i beta.
+
+Du kan finde det her [APICVR.dk](https://apicvr.dk).
+Docs: [APICVR Docs](https://apicvr.dk/docs)
+ReDoc: [APICVR ReDoc](https://apicvr.dk/redoc)
+
 # Hvad er API CVR?
 
 API CVR er sat i verden for at gøre livet lidt nemmere for udviklere, som skal lave en integration til CVR.
@@ -17,3 +23,4 @@ Hvis du mener dine Python-skills er bedre end vores slam-kode, så lav et pull r
 
 For at opsætte API CVR på din egen server, så skal du blot kopiere env.example til .env og smide dit Basic Auth token ind.Derefter kan du køre vores Docker Image
 Du skal rekvirere System-Til-System-Adgang til Erhvervsstyrelsen.
+
