@@ -28,7 +28,7 @@ def searchcvrAPI(cvrNumber):
         }
     })
     headers = {
-        'Authorization': 'Basic ' + APITOKEN,
+        'Authorization': f'Basic {APITOKEN}',
         'Content-Type': 'application/json'
     }
 
