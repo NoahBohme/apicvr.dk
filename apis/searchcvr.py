@@ -15,17 +15,6 @@ APITOKEN = os.getenv("API_TOKEN")
 url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
 
 
-def vismaRatingAPI(cvrNumber):
-    url = "https://api.vismarating.com/credit/41013583"
-
-    payload = {}
-    headers = {}
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-
-    return response.text
-
-
 # Visma Credit Rating API
 
 def vismaRatingAPI(cvrNumber):
@@ -55,7 +44,7 @@ def searchcvrAPI(cvrNumber):
         }
     })
     headers = {
-        'Authorization': 'Basic ' + "TkJSX1NvbHV0aW9uc19DVlJfSV9TS1lFTjozN2U5Mzc5Yi02YjVhLTQwNTYtOTE5Yi0zZGUwMmZmMzEzMjc=",
+        'Authorization': 'Basic ' + APITOKEN,
         'Content-Type': 'application/json'
     }
 
@@ -237,14 +226,6 @@ def searchcvrAPI(cvrNumber):
         formcode = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
             'virksomhedMetadata']['nyesteVirksomhedsform']['virksomhedsformkode']
 
-        # Credit info
-
-        # creditStatusCode = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-        #    'virksomhedMetadata']['nyesteStatus']['statuskode'])
-
-        # creditStartDate = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-        #    'virksomhedMetadata']['nyesteStatus']['periode']['gyldigFra'].split('-')[2] + "/" + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['periode']['gyldigFra'].split('-')[1] + " - " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['periode']['gyldigFra'].split('-')[0]
-
         # Data about a company about a bankruptcy
         try:
             if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['kreditoplysningtekst'] == "Konkurs"):
@@ -253,15 +234,6 @@ def searchcvrAPI(cvrNumber):
                 bankrupt = False
         except:
             bankrupt = False
-
-        # Data about a company if it's merged
-
-        # Production Ubits
-        productionUnits = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['penheder']
-
-        # Owners of the company
-
-        # Yet to be implemented
 
         try:
             endData = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
@@ -288,16 +260,12 @@ def searchcvrAPI(cvrNumber):
             "industrydesc": businessType,
             "companycode": formcode,
             "companydesc": companyFormationTypeLong,
-            # "creditstatus": creditStatusCode,
-            # "creditstartdate": creditStartDate,
-            # "credittext": creditStatusText,
             "bankrupt": bankrupt,
             "status": companyStatus,
             "companytypeshort": companyFormationTypeShort,
-            # "productionunits": productionUnits,
             "website": website,
-            # "creditrating": vismaRatingAPI(41013583)[0],
-            # "creditratingdays": vismaRatingAPI(cvrNumber)[1],
+            "creditrating": vismaRatingAPI(cvrNumber)[0],
+            "creditratingdays": vismaRatingAPI(cvrNumber)[1],
             "version": 1,
 
         }
