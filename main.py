@@ -5,7 +5,20 @@ from fastapi.templating import Jinja2Templates
 
 from fastapi import FastAPI, Request
 
-app = FastAPI()
+app = FastAPI(
+    title="APICVR.dk",
+    description="APICVR er et gratis og open source API til at søge på CVR",
+    version="1.0",
+    contact={
+        "name": "Noah Böhme Rasmussen",
+        "url": "https://noahbohme.com",
+        "email": "apicvr@noahbohme.com",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://raw.githubusercontent.com/NoahBohme/apicvr.dk/master/LICENSE",
+    },
+)
 
 templates = Jinja2Templates(directory="frontend/templates")
 
