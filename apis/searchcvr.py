@@ -15,11 +15,38 @@ APITOKEN = os.getenv("API_TOKEN")
 url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
 
 
+def vismaRatingAPI(cvrNumber):
+    url = "https://api.vismarating.com/credit/41013583"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return response.text
+
+
+# Visma Credit Rating API
+
+def vismaRatingAPI(cvrNumber):
+    url = "https://api.vismarating.com/credit/" + str(cvrNumber)
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    if (response.status_code == 200):
+        return (response.json()['credit_score'], response.json()['credit_days'])
+    else:
+        return (None, None)
+
+
 def searchcvrAPI(cvrNumber):
 
     payload = json.dumps({
         "_source": [
-            "Vrvirksomhed.virksomhedMetadata"
+            "Vrvirksomhed"
         ],
         "query": {
             "term": {
@@ -28,7 +55,7 @@ def searchcvrAPI(cvrNumber):
         }
     })
     headers = {
-        'Authorization': 'Basic ' + APITOKEN,
+        'Authorization': 'Basic ' + "TkJSX1NvbHV0aW9uc19DVlJfSV9TS1lFTjozN2U5Mzc5Yi02YjVhLTQwNTYtOTE5Yi0zZGUwMmZmMzEzMjc=",
         'Content-Type': 'application/json'
     }
 
@@ -36,70 +63,82 @@ def searchcvrAPI(cvrNumber):
 
     # POST END
 
-    jsonResonse = response.json()
+    jsonResponse = response.json()
 
-    if (jsonResonse['hits']['total'] == 0):
+    if (jsonResponse['hits']['total'] == 0):
 
         return {"error": "NOT_FOUND"}
 
     else:
-        companyName = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteNavn']['navn']
+        companyName = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteNavn']['navn']
 
-        formationDate = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['stiftelsesDato']
+        # Formation date
 
-        companyStatus = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['sammensatStatus']
+        startDate = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['stiftelsesDato'].split('-')[2] + "/" + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['stiftelsesDato'].split('-')[
+            1] + " - " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['stiftelsesDato'].split('-')[0]
+
+        companyStatus = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['sammensatStatus']
+
+        # End date
+
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'] != None):
+            endDate = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'].split('-')[2] + "/" + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'].split('-')[
+                1] + " - " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'].split('-')[0]
+        else:
+            endDate = None
 
         # Dansk = Virksomhedstype
-        companyFormationTypeLong = jsonResonse['hits']['hits'][0]['_source'][
+        companyFormationTypeLong = jsonResponse['hits']['hits'][0]['_source'][
             'Vrvirksomhed']['virksomhedMetadata']['nyesteVirksomhedsform']['langBeskrivelse']
 
-        companyFormationTypeShort = jsonResonse['hits']['hits'][0]['_source'][
+        companyFormationTypeShort = jsonResponse['hits']['hits'][0]['_source'][
             'Vrvirksomhed']['virksomhedMetadata']['nyesteVirksomhedsform']['kortBeskrivelse']
 
-        businessType = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        businessType = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
             'virksomhedMetadata']['nyesteHovedbranche']['branchetekst']
 
-        businessTypeID = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-            'virksomhedMetadata']['nyesteHovedbranche']['branchekode']
+        businessTypeID = int(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            'virksomhedMetadata']['nyesteHovedbranche']['branchekode'])
 
-        addressStreet = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        addressStreet = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
             'virksomhedMetadata']['nyesteBeliggenhedsadresse']['vejnavn']
 
         # Address Street Numer From
-        if (jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerFra'] == None):
             addressStreetNumberFrom = ""
         else:
-            addressStreetNumberFrom = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            addressStreetNumberFrom = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerFra']
 
         # Address Street Number To
-        if (jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerTil'] == None):
             adressStreetNumberTo = ""
         else:
-            adressStreetNumberTo = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            adressStreetNumberTo = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerTil']
 
         # Address Street Letter From
-        if (jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavFra'] == None):
             adressStreetLetterFrom = ""
         else:
-            adressStreetLetterFrom = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            adressStreetLetterFrom = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavFra']
 
         # Adress Street Letter To
-        if (jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavTil'] == None):
             adressStreetLetterTo = ""
         else:
-            adressStreetLetterTo = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            adressStreetLetterTo = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavTil']
 
         # Combined Address
 
-        combinedAdress = addressStreet + " " + str(addressStreetNumberFrom)
+        combinedAdress = addressStreet + " " + \
+            str(addressStreetNumberFrom)
 
         # Street Number to and street lettes
         if (adressStreetNumberTo != ""):
@@ -111,9 +150,52 @@ def searchcvrAPI(cvrNumber):
         if (adressStreetLetterTo != ""):
             combinedAdress = combinedAdress + "-" + adressStreetLetterTo
 
+            # Level of address
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['etage'] != None):
+            combinedAdress = combinedAdress + ", " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['etage']
+        else:
+            combinedAdress = combinedAdress
+
+        # Zipcode
+
+        addressZipcode = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            'virksomhedMetadata']['nyesteBeliggenhedsadresse']['postnummer'])
+
+        # City
+
+        addressCity = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            'virksomhedMetadata']['nyesteBeliggenhedsadresse']['postdistrikt'])
+
+        # City name
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bynavn'] != None):
+            addressCityName = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bynavn'])
+        else:
+            addressCityName = None
+
+        # addressCo
+
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['conavn'] != None):
+            addressCo = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['conavn'])
+        else:
+            addressCo = None
+
+        # Advertisement protection
+
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['reklamebeskyttet'] != None):
+            advertisementProtection = jsonResponse['hits']['hits'][0]['_source'][
+                'Vrvirksomhed']['reklamebeskyttet']
+        else:
+            advertisementProtection = None
+
         # Overall contact info
 
-        contactinfo = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteKontaktoplysninger']
+        contactinfo = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteKontaktoplysninger']
 
         # Phone number
         phone = str(re.findall(r'\b\d{8}\b', str(contactinfo))).replace(
@@ -121,9 +203,21 @@ def searchcvrAPI(cvrNumber):
         if (phone == ""):
             phone = None
 
+        # Fax
+
+        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['telefaxNummer'] == ""):
+            fax = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['telefaxNummer']).replace(
+                "[", "").replace("]", "").replace("'", "")
+        else:
+            fax = None
+
         # Email info
-        email = str(re.findall(r'\b[\w.-]+@[\w.-]+\b',
-                    str(contactinfo))).replace("['", "").replace("']", "")
+        if (str(re.findall(r'\b[\w.-]+@[\w.-]+\b',
+                           str(contactinfo))).replace("['", "").replace("']", "") == "[]"):
+            email = None
+        else:
+            email = str(re.findall(r'\b[\w.-]+@[\w.-]+\b',
+                                   str(contactinfo))).replace("['", "").replace("']", "")
 
         # Website info of the company
         website = str(re.findall(r'\bhttp[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\b', str(
@@ -134,14 +228,26 @@ def searchcvrAPI(cvrNumber):
 
         # Data about Employees
         try:
-            employees = jsonResonse['hits']['hits'][0]['_source'][
+            employees = jsonResponse['hits']['hits'][0]['_source'][
                 'Vrvirksomhed']['virksomhedMetadata']['nyesteErstMaanedsbeskaeftigelse']['antalAnsatte']
         except:
             employees = None
 
+        # Formcode
+        formcode = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            'virksomhedMetadata']['nyesteVirksomhedsform']['virksomhedsformkode']
+
+        # Credit info
+
+        # creditStatusCode = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        #    'virksomhedMetadata']['nyesteStatus']['statuskode'])
+
+        # creditStartDate = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+        #    'virksomhedMetadata']['nyesteStatus']['periode']['gyldigFra'].split('-')[2] + "/" + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['periode']['gyldigFra'].split('-')[1] + " - " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['periode']['gyldigFra'].split('-')[0]
+
         # Data about a company about a bankruptcy
         try:
-            if (jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['kreditoplysningtekst'] == "Konkurs"):
+            if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['kreditoplysningtekst'] == "Konkurs"):
                 bankrupt = True
             else:
                 bankrupt = False
@@ -150,10 +256,48 @@ def searchcvrAPI(cvrNumber):
 
         # Data about a company if it's merged
 
+        # Production Ubits
+        productionUnits = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['penheder']
+
+        # Owners of the company
+
+        # Yet to be implemented
+
         try:
-            endData = jsonResonse['hits']['hits'][0]['_source']['Vrvirksomhed'][
+            endData = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
                 'virksomhedMetadata']['nyesteNavn']['periode']['gyldigTil']
         except:
             endData = None
 
-        return {"cvr": cvrNumber, "name": companyName, "formationdate": formationDate, "status": companyStatus, "companytype": companyFormationTypeLong, "companytypeshort": companyFormationTypeShort, "industry": businessType, "industryid": businessTypeID, "address": combinedAdress, "phone": phone, "email": email, "website": website, "employees": employees, "bankrupt": bankrupt, "enddate": endData}
+        return {
+            "vat": cvrNumber,
+            "name": companyName,
+            "address": combinedAdress,
+            "zipcode": addressZipcode,
+            "city": addressCity,
+            "cityname": addressCityName,
+            "protected": advertisementProtection,
+            "phone": phone,
+            "email": email,
+            "fax": fax,
+            "startdate": startDate,
+            "enddate": endDate,
+            "employees": employees,
+            "addressco": addressCo,
+            "industrycode": businessTypeID,
+            "industrydesc": businessType,
+            "companycode": formcode,
+            "companydesc": companyFormationTypeLong,
+            # "creditstatus": creditStatusCode,
+            # "creditstartdate": creditStartDate,
+            # "credittext": creditStatusText,
+            "bankrupt": bankrupt,
+            "status": companyStatus,
+            "companytypeshort": companyFormationTypeShort,
+            # "productionunits": productionUnits,
+            "website": website,
+            # "creditrating": vismaRatingAPI(41013583)[0],
+            # "creditratingdays": vismaRatingAPI(cvrNumber)[1],
+            "version": 1,
+
+        }

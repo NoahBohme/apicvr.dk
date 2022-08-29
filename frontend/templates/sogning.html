@@ -1,0 +1,35 @@
+<head>
+    <title>Søg efter et CVR-nummer</title>
+</head>
+
+<body>
+    <!--Search field-->
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12">
+                <input type="text" id="cvrSearch" placeholder="12345678" />
+                <button id="cvrSearch" onclick="cvrSearch()">Søg</button>
+
+            </div>
+        </div>
+    </div>
+    <script>
+        function cvrSearch() {
+            var cvr;
+            cvr = document.getElementById("cvrSearch").value;
+            window.location.replace("/da/virksomhed/" + cvr);
+        }
+    </script>
+    <style>
+        body{
+            background-color: #f5f5f5;
+            margin-left: 20px;
+        }
+        div.cvrRules{
+            border: 1px solid black;
+            padding: 10px;
+            margin: 10px;
+            margin-right: 50px;
+        }
+    </style>
+</body>
