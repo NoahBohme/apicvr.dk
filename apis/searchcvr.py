@@ -14,22 +14,6 @@ APITOKEN = os.getenv("API_TOKEN")
 url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
 
 
-# Visma Credit Rating API
-
-def vismaRatingAPI(cvrNumber):
-    url = "https://api.vismarating.com/credit/" + str(cvrNumber)
-
-    payload = {}
-    headers = {}
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-
-    if (response.status_code == 200):
-        return (response.json()['credit_score'], response.json()['credit_days'])
-    else:
-        return (None, None)
-
-
 # Making a POST Request to system-til-system-adgang
 def searchcvrAPI(cvrNumber):
 
@@ -276,8 +260,6 @@ def searchcvrAPI(cvrNumber):
             "status": companyStatus,
             "companytypeshort": companyFormationTypeShort,
             "website": website,
-            "creditrating": vismaRatingAPI(cvrNumber)[0],
-            "creditratingdays": vismaRatingAPI(cvrNumber)[1],
             "version": 1,
 
         }
