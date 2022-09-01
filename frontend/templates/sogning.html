@@ -1,8 +1,30 @@
 <head>
+    <link rel="stylesheet" type="text/css" href="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui.css">
     <title>Søg efter et CVR-nummer</title>
 </head>
 
 <body>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui-standalone-preset.js"></script>
+    <script src="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui-bundle.js"></script>
+
+    <script>
+    window.onload = function() {
+    const ui = SwaggerUIBundle({
+        url: "http://127.0.0.1:8000/openapi.json",
+        dom_id: '#swagger-ui',
+        presets: [
+        SwaggerUIBundle.presets.apis,
+        SwaggerUIStandalonePreset
+        ]
+    })
+
+    window.ui = ui
+    }
+    </script>
+
     <!--Search field-->
     <div class="container">
         <div class="row">

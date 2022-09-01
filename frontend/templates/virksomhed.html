@@ -13,13 +13,13 @@
     <body>
 
         <h1>{{ info['name'] }}</h1>
-        {% set test = info['protected'] %}
-        {% if test == true %}
+        {% set reklamebeskyttelset = info['protected'] %}
+        {% if reklamebeskyttelset == true %}
             {# the if part #}
             <h4 style="color: red">Reklamebeskyttet</h4>
             <a href="https://datacvr.virk.dk/artikel/reklamebeskyttelse"><p>Læs mere om vilkår for reklamebeskyttelse</p></a>
             {% else %}
-            <p>Nej</p>
+            <h4 style="color: green">Ikke reklamebeskyttet</h4>
             {# the else part #}
         {% endif %}
         <div class="col-sm-12">
