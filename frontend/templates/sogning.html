@@ -9,7 +9,7 @@
 
     <script src="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui-standalone-preset.js"></script>
     <script src="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui-bundle.js"></script>
-
+    <!--
     <script>
     window.onload = function() {
     const ui = SwaggerUIBundle({
@@ -24,8 +24,12 @@
     window.ui = ui
     }
     </script>
+    -->
 
     <!--Search field-->
+    <div class="container">
+        <h4>Søg efter CVR-nummer</h4>
+    </div>
     <div class="container">
         <div class="row">
             <div class="col-sm-12">
@@ -44,7 +48,7 @@
     </script>
     <style>
         body{
-            background-color: #f5f5f5;
+            background-color: #EBEBEB;
             margin-left: 20px;
         }
         div.cvrRules{
@@ -52,6 +56,28 @@
             padding: 10px;
             margin: 10px;
             margin-right: 50px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        h4{
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 48px;
+            font-weight: 400;
+        }
+        input[type=text] {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            box-sizing: border-box;
+        }
+        #cvrSearch{
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            box-sizing: border-box;
         }
     </style>
 </body>
