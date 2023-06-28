@@ -53,8 +53,8 @@ def read_root(cvrNumber: int):
 
 # Search in registeringshistorik after capital raise
 
-@app.get("/da/kapitalsog/{cvrNumber}")
-async def search_da(request: Request, cvrNumber: str):
+@app.get("/da/kapitalsog/")
+async def search_da(request: Request):
     return templates.TemplateResponse("/kapitalsog.html", {"request": request})
 
 
