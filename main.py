@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
-from modules.kapitalsog import show_capital_result
+from app.modules.kapitalsog import show_capital_result
 
 app = FastAPI(
     title="APICVR.dk",
