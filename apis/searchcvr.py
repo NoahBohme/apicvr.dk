@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 project_folder = os.path.expanduser('/code/app')
 load_dotenv(os.path.join(project_folder, '.env'))
 APITOKEN = os.getenv("API_TOKEN")
-APITOKEN = "TkJSX1NvbHV0aW9uc19DVlJfSV9TS1lFTjozN2U5Mzc5Yi02YjVhLTQwNTYtOTE5Yi0zZGUwMmZmMzEzMjc"
 
 
 # API endpoint

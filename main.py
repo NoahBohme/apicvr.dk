@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
+from modules.kapitalsog import show_capital_result
 
 app = FastAPI(
     title="APICVR.dk",
@@ -52,11 +53,11 @@ def read_root(cvrNumber: int):
 
 # Search in registeringshistorik after capital raise
 
-@app.get("/da/kapitalsog/")
-async def search_da(request: Request):
+@app.get("/da/kapitalsog/{cvrNumber}")
+async def search_da(request: Request, cvrNumber: str):
     return templates.TemplateResponse("/kapitalsog.html", {"request": request})
 
 
 @app.get("/da/kapitalindsigt/{cvrNumber}")
 async def company_frontned(request: Request, cvrNumber: str):
-    return templates.TemplateResponse("/kapitalresultat.html", {"request": request, "cvrNumber": cvrNumber, "info": search_cvr_api(cvrNumber)})
+    return templates.TemplateResponse("/kapitalresultat.html", {"request": request, "data": show_capital_result(cvrNumber)})
