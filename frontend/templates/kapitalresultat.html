@@ -1,0 +1,50 @@
+<html>
+<head>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <style>
+        .center-align {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    {% if data %}
+        <h1>Result</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>offentliggoerelseId</th>
+                    <th>registreringTidsstempel</th>
+                    <th>offentliggoerelseTidsstempel</th>
+                    <th>cvrNummer</th>
+                    <th>hovednavn</th>
+                    <th>Tekst</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in data %}
+                <tr>
+                    <td>{{ entry.offentliggoerelseId }}</td>
+                    <td>{{ entry.registreringTidsstempel}}</td>
+                    <td>{{ entry.offentliggoerelseTidsstempel}}</td>
+                    <td>{{ entry.cvrNummer }}</td>
+                    <td>{{ entry.hovednavn }}</td>
+                    <td>{{ entry.formatted_tekst }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="center-align">
+            <h1>Ingen kapitalforhøjelse</h1>
+        </div>
+    {% endif %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+</body>
+</html>

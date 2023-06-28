@@ -1,0 +1,83 @@
+<head>
+    <link rel="stylesheet" type="text/css" href="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui.css">
+    <title>Søg efter et CVR-nummer</title>
+</head>
+
+<body>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui-standalone-preset.js"></script>
+    <script src="https://s3-dk6.clu1.obj.storagefactory.io/noah/swagger-dep/swagger-ui-bundle.js"></script>
+    <!--
+    <script>
+    window.onload = function() {
+    const ui = SwaggerUIBundle({
+        url: "http://127.0.0.1:8000/openapi.json",
+        dom_id: '#swagger-ui',
+        presets: [
+        SwaggerUIBundle.presets.apis,
+        SwaggerUIStandalonePreset
+        ]
+    })
+
+    window.ui = ui
+    }
+    </script>
+    -->
+
+    <!--Search field-->
+    <div class="container">
+        <h4>Søg efter CVR-nummer</h4>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12">
+                <input type="text" id="cvrSearch" placeholder="12345678" />
+                <button id="cvrSearch" onclick="cvrSearch()">Søg</button>
+
+            </div>
+        </div>
+    </div>
+    <script>
+        function cvrSearch() {
+            var cvr;
+            cvr = document.getElementById("cvrSearch").value;
+            window.location.replace("/da/kapitalsog/" + cvr);
+        }
+    </script>
+    <style>
+        body{
+            background-color: #EBEBEB;
+            margin-left: 20px;
+        }
+        div.cvrRules{
+            border: 1px solid black;
+            padding: 10px;
+            margin: 10px;
+            margin-right: 50px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        h4{
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 48px;
+            font-weight: 400;
+        }
+        input[type=text] {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            box-sizing: border-box;
+        }
+        #cvrSearch{
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            box-sizing: border-box;
+        }
+    </style>
+</body>

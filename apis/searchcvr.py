@@ -5,25 +5,22 @@ import re
 from dotenv import load_dotenv
 
 # Load .env file
-
 project_folder = os.path.expanduser('/code/app')
 load_dotenv(os.path.join(project_folder, '.env'))
 APITOKEN = os.getenv("API_TOKEN")
-# START POST
+APITOKEN = "TkJSX1NvbHV0aW9uc19DVlJfSV9TS1lFTjozN2U5Mzc5Yi02YjVhLTQwNTYtOTE5Yi0zZGUwMmZmMzEzMjc"
 
+
+# API endpoint
 url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
 
-
-# Making a POST Request to system-til-system-adgang
-def searchcvrAPI(cvrNumber):
-
+# Make a POST request to system-til-system-adgang
+def search_cvr_api(cvr_number):
     payload = json.dumps({
-        "_source": [
-            "Vrvirksomhed"
-        ],
+        "_source": ["Vrvirksomhed"],
         "query": {
             "term": {
-                "Vrvirksomhed.cvrNummer": cvrNumber
+                "Vrvirksomhed.cvrNummer": cvr_number
             }
         }
     })
@@ -33,233 +30,108 @@ def searchcvrAPI(cvrNumber):
     }
 
     response = requests.request("POST", url, headers=headers, data=payload)
+    json_response = response.json()
 
-    # Formatting the response to json
-    jsonResponse = response.json()
-
-    # If the response is empty, return not found
-    if (jsonResponse['hits']['total'] == 0):
-
+    if json_response['hits']['total'] == 0:
         return {"error": "NOT_FOUND"}
-
-    # If the response is not empty, return the response
     else:
+        company = json_response['hits']['hits'][0]['_source']['Vrvirksomhed']
+        return format_company_data(company, cvr_number)
 
-        # Find company name
-        companyName = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteNavn']['navn']
+# Format company data
+def format_company_data(company, cvr_number):
+    company_data = {
+        "vat": cvr_number,
+        "name": get_company_name(company),
+        "address": get_combined_address(company),
+        "zipcode": get_address_field(company, 'postnummer'),
+        "city": get_address_field(company, 'postdistrikt'),
+        "cityname": get_address_field(company, 'bynavn'),
+        "protected": company.get('reklamebeskyttet'),
+        "phone": get_phone_number(company),
+        "email": get_email(company),
+        "fax": company.get('telefaxNummer'),
+        "startdate": get_formatted_date(company['virksomhedMetadata']['stiftelsesDato']),
+        "enddate": get_formatted_date(company['livsforloeb'][0]['periode']['gyldigTil']) if 'gyldigTil' in company['livsforloeb'][0]['periode'] else None,
+        "employees": get_employees(company),
+        "addressco": get_address_field(company, 'conavn'),
+        "industrycode": company['virksomhedMetadata']['nyesteHovedbranche']['branchekode'],
+        "industrydesc": company['virksomhedMetadata']['nyesteHovedbranche']['branchetekst'],
+        "companycode": company['virksomhedMetadata']['nyesteVirksomhedsform']['virksomhedsformkode'],
+        "companydesc": company['virksomhedMetadata']['nyesteVirksomhedsform']['langBeskrivelse'],
+        "bankrupt": is_bankrupt(company),
+        "status": company['virksomhedMetadata']['sammensatStatus'],
+        "companytypeshort": company['virksomhedMetadata']['nyesteVirksomhedsform']['kortBeskrivelse'],
+        "website": get_website(company),
+        "version": 1
+    }
+    return company_data
 
-        # Find company start date
-        startDate = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['stiftelsesDato'].split('-')[2] + "/" + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['stiftelsesDato'].split('-')[
-            1] + " - " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['stiftelsesDato'].split('-')[0]
+# Get company name
+def get_company_name(company):
+    return company['virksomhedMetadata']['nyesteNavn']['navn']
 
-        # Check if company has a end date
+# Get combined address
+# Get combined address
+def get_combined_address(company):
+    address = company['virksomhedMetadata']['nyesteBeliggenhedsadresse']
+    combined_address = f"{address['vejnavn']} {address.get('husnummerFra', '')}"
 
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'] != None):
-            endDate = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'].split('-')[2] + "/" + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'].split('-')[
-                1] + " - " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['livsforloeb'][0]['periode']['gyldigTil'].split('-')[0]
-        else:
-            endDate = None
+    if address.get('husnummerTil'):
+        combined_address += f"-{address['husnummerTil']}"
 
-        # Company status
-        companyStatus = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['sammensatStatus']
+    combined_address += address.get('bogstavFra', '') or ''
 
-        # Find the company type
+    if address.get('bogstavTil'):
+        combined_address += f"-{address['bogstavTil']}"
 
-        companyFormationTypeShort = jsonResponse['hits']['hits'][0]['_source'][
-            'Vrvirksomhed']['virksomhedMetadata']['nyesteVirksomhedsform']['kortBeskrivelse']
+    combined_address += f", {address['etage']}" if address.get('etage') else ''
 
-        companyFormationTypeLong = jsonResponse['hits']['hits'][0]['_source'][
-            'Vrvirksomhed']['virksomhedMetadata']['nyesteVirksomhedsform']['langBeskrivelse']
+    return combined_address
 
-        # Find company field of work
-        businessType = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-            'virksomhedMetadata']['nyesteHovedbranche']['branchetekst']
 
-        # Find the ID of field of work
-        businessTypeID = int(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-            'virksomhedMetadata']['nyesteHovedbranche']['branchekode'])
+# Get specific field from address
+def get_address_field(company, field):
+    address = company['virksomhedMetadata']['nyesteBeliggenhedsadresse']
+    return address.get(field)
 
-        # Address of company
-        addressStreet = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-            'virksomhedMetadata']['nyesteBeliggenhedsadresse']['vejnavn']
+# Get formatted date
+def get_formatted_date(date):
+    if date is None:
+        return None
+    parts = date.split('-')
+    return f"{parts[2]}/{parts[1]} - {parts[0]}"
 
-        # Address street number from
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerFra'] == None):
-            addressStreetNumberFrom = ""
-        else:
-            addressStreetNumberFrom = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerFra']
+# Get phone number
+def get_phone_number(company):
+    contact_info = company['virksomhedMetadata']['nyesteKontaktoplysninger']
+    phone = re.findall(r'\b\d{8}\b', str(contact_info))
+    return phone[0] if phone else None
 
-        # Address street number to
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerTil'] == None):
-            addressStreetNumberTo = ""
-        else:
-            addressStreetNumberTo = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['husnummerTil']
+# Get email
+def get_email(company):
+    contact_info = company['virksomhedMetadata']['nyesteKontaktoplysninger']
+    email = re.findall(r'\b[\w.-]+@[\w.-]+\b', str(contact_info))
+    return email[0] if email else None
 
-        # Address Street Letter From
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavFra'] == None):
-            addressStreetLetterFrom = ""
-        else:
-            addressStreetLetterFrom = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavFra']
+# Get website
+def get_website(company):
+    contact_info = company['virksomhedMetadata']['nyesteKontaktoplysninger']
+    website = re.findall(r'\bhttp[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\b', str(contact_info))
+    return website[0] if website else None
 
-        # Address Street Letter To
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavTil'] == None):
-            addressStreetLetterTo = ""
-        else:
-            addressStreetLetterTo = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bogstavTil']
-
-        # Create Combined Address
-        combinedAddress = addressStreet + " " + \
-            str(addressStreetNumberFrom)
-
-        # Street Number to and street lettes
-        if (addressStreetNumberTo != ""):
-            combinedAddress = combinedAddress + \
-                "-" + str(addressStreetNumberTo)
-
-        if (addressStreetLetterFrom != ""):
-            combinedAddress = combinedAddress + addressStreetLetterFrom
-
-        if (addressStreetLetterTo != ""):
-            combinedAddress = combinedAddress + "-" + addressStreetLetterTo
-
-            # Level of address
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['etage'] != None):
-            combinedAddress = combinedAddress + ", " + jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['etage']
-        else:
-            combinedAddress = combinedAddress
-
-        # Zipcode
-
-        addressZipcode = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-            'virksomhedMetadata']['nyesteBeliggenhedsadresse']['postnummer'])
-
-        # City
-
-        addressCity = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-            'virksomhedMetadata']['nyesteBeliggenhedsadresse']['postdistrikt'])
-
-        # City name
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bynavn'] != None):
-            addressCityName = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['bynavn'])
-        else:
-            addressCityName = None
-
-        # addressCo
-
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['conavn'] != None):
-            addressCo = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteBeliggenhedsadresse']['conavn'])
-        else:
-            addressCo = None
-
-        # Advertisement protection
-
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['reklamebeskyttet'] != None):
-            advertisementProtection = jsonResponse['hits']['hits'][0]['_source'][
-                'Vrvirksomhed']['reklamebeskyttet']
-        else:
-            advertisementProtection = None
-
-        # Contact info
-
-        contactinfo = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteKontaktoplysninger']
-
-        # Phone number
-        phone = str(re.findall(r'\b\d{8}\b', str(contactinfo))).replace(
-            "[", "").replace("]", "").replace("'", "")
-        if (phone == ""):
-            phone = None
-
-        # Fax
-
-        if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['telefaxNummer'] == ""):
-            fax = str(jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['telefaxNummer']).replace(
-                "[", "").replace("]", "").replace("'", "")
-        else:
-            fax = None
-
-        # Email info
-
-        if (str(re.findall(r'\b[\w.-]+@[\w.-]+\b',
-                           str(contactinfo))).replace("['", "").replace("']", "") == "[]"):
-            email = None
-        else:
-            email = str(re.findall(r'\b[\w.-]+@[\w.-]+\b',
-                                   str(contactinfo))).replace("['", "").replace("']", "")
-
-        # Website info of the company
-
-        website = str(re.findall(r'\bhttp[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\b', str(
-            contactinfo))).replace("[", "").replace("]", "").replace("'", "")
-
-        if (website == ""):
-            website = None
-
-        # Data about Employees
-
-        try:
-            employees = jsonResponse['hits']['hits'][0]['_source'][
-                'Vrvirksomhed']['virksomhedMetadata']['nyesteErstMaanedsbeskaeftigelse']['antalAnsatte']
-        except:
-            employees = None
-
-        # Formcode
-        formcode = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-            'virksomhedMetadata']['nyesteVirksomhedsform']['virksomhedsformkode']
-
-        # Data about a company about a bankruptcy
-
-        try:
-            if (jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed']['virksomhedMetadata']['nyesteStatus']['kreditoplysningtekst'] == "Konkurs"):
-                bankrupt = True
-            else:
-                bankrupt = False
-        except:
-            bankrupt = False
-
-        try:
-            endData = jsonResponse['hits']['hits'][0]['_source']['Vrvirksomhed'][
-                'virksomhedMetadata']['nyesteNavn']['periode']['gyldigTil']
-        except:
-            endData = None
-
-        # Return data to API
-        return {
-            "vat": cvrNumber,
-            "name": companyName,
-            "address": combinedAddress,
-            "zipcode": addressZipcode,
-            "city": addressCity,
-            "cityname": addressCityName,
-            "protected": advertisementProtection,
-            "phone": phone,
-            "email": email,
-            "fax": fax,
-            "startdate": startDate,
-            "enddate": endDate,
-            "employees": employees,
-            "addressco": addressCo,
-            "industrycode": businessTypeID,
-            "industrydesc": businessType,
-            "companycode": formcode,
-            "companydesc": companyFormationTypeLong,
-            "bankrupt": bankrupt,
-            "status": companyStatus,
-            "companytypeshort": companyFormationTypeShort,
-            "website": website,
-            "version": 1,
-
-        }
+# Get number of employees
+def get_employees(company):
+    metadata = company.get('virksomhedMetadata', {})
+    erst_maaned_beskaeftigelse = metadata.get('nyesteErstMaanedsbeskaeftigelse')
+    if erst_maaned_beskaeftigelse:
+        return erst_maaned_beskaeftigelse.get('antalAnsatte')
+    return None
+# Check if the company is bankrupt
+def is_bankrupt(company):
+    metadata = company.get('virksomhedMetadata')
+    if metadata:
+        nyeste_status = metadata.get('nyesteStatus')
+        if nyeste_status:
+            return nyeste_status.get('kreditoplysningtekst') == "Konkurs"
+    return False
