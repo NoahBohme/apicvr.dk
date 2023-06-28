@@ -39,10 +39,24 @@ async def home(request: Request):
 async def search_da(request: Request):
     return templates.TemplateResponse("/sogning.html", {"request": request})
 
+
 @app.get("/da/virksomhed/{cvrNumber}")
 async def company_frontned(request: Request, cvrNumber: str):
-    return templates.TemplateResponse("/virksomhed.html", {"request": request, "cvrNumber": cvrNumber, "info": searchcvrAPI(cvrNumber)})
+    return templates.TemplateResponse("/virksomhed.html", {"request": request, "cvrNumber": cvrNumber, "info": search_cvr_api(cvrNumber)})
+
 
 @app.get("/api/v1/{cvrNumber}")
 def read_root(cvrNumber: int):
-    return searchcvrAPI(cvrNumber)
+    return search_cvr_api(cvrNumber)
+
+
+# Search in registeringshistorik after capital raise
+
+@app.get("/da/kapitalsog/")
+async def search_da(request: Request):
+    return templates.TemplateResponse("/kapitalsog.html", {"request": request})
+
+
+@app.get("/da/kapitalindsigt/{cvrNumber}")
+async def company_frontned(request: Request, cvrNumber: str):
+    return templates.TemplateResponse("/kapitalresultat.html", {"request": request, "cvrNumber": cvrNumber, "info": search_cvr_api(cvrNumber)})
