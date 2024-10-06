@@ -37,6 +37,34 @@ def search_cvr_api(cvr_number):
         company = json_response['hits']['hits'][0]['_source']['Vrvirksomhed']
         return format_company_data(company, cvr_number)
 
+def search_cvr_by_name(company_name):
+    payload = json.dumps({
+        "_source": ["Vrvirksomhed"],
+        "query": {
+            "match_phrase_prefix": {
+                "Vrvirksomhed.virksomhedMetadata.nyesteNavn.navn": company_name
+            }
+        },
+        "size": 100  # Adjust the size as needed
+    })
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    json_response = response.json()
+
+    
+    companies = []
+    for hit in json_response['hits']['hits']:
+        company = hit['_source']['Vrvirksomhed']
+        cvr_number = company['cvrNummer']
+        formatted_company = format_company_data(company, cvr_number)
+        companies.append(formatted_company)
+    return companies
+    
+
 # Format company data
 def format_company_data(company, cvr_number):
     company_data = {

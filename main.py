@@ -50,6 +50,10 @@ async def company_frontned(request: Request, cvrNumber: str):
 def read_root(cvrNumber: int):
     return search_cvr_api(cvrNumber)
 
+@app.get("/api/v1/search/company/{companyName}")
+def search_company(companyName: str):
+    return search_cvr_by_name(companyName)
+
 
 # Search in registeringshistorik after capital raise
 
