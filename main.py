@@ -54,6 +54,12 @@ def read_root(cvrNumber: int):
 def search_company(companyName: str):
     return search_cvr_by_name(companyName)
 
+@app.get("/api/v1/fuzzy_search/company/{companyName}")
+def search_company_fuzzy(companyName: str):
+    return search_cvr_by_fuzzy_name(companyName)
+
+
+
 
 # Search in registeringshistorik after capital raise
 

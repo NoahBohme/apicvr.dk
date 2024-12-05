@@ -63,7 +63,66 @@ def search_cvr_by_name(company_name):
         formatted_company = format_company_data(company, cvr_number)
         companies.append(formatted_company)
     return companies
-    
+
+
+def search_cvr_by_fuzzy_name(company_name):
+    # Define the payload for the multi_match query
+    payload = json.dumps({
+        "_source": ["Vrvirksomhed"],
+        "query": {
+            "multi_match": {
+                "query": company_name,
+                "fields": ["Vrvirksomhed.virksomhedMetadata.nyesteNavn.navn^2"],
+                "fuzziness": "AUTO"
+            }
+        },
+        "size": 100
+    })
+
+    # Set up headers with authorization and content type
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    # Send the POST request to Elasticsearch
+    response = requests.post(url, headers=headers, data=payload)
+
+    # Handle potential errors
+    if response.status_code != 200:
+        raise Exception(f"Error querying Elasticsearch: {response.status_code}, {response.text}")
+
+    # Parse the JSON response
+    json_response = response.json()
+
+    # Extract companies from the response
+    companies = []
+    for hit in json_response.get('hits', {}).get('hits', []):
+        company = hit['_source'].get('Vrvirksomhed', {})
+        cvr_number = company.get('cvrNummer', None)
+
+        # Safely extract nested fields
+        metadata = company.get('virksomhedMetadata', {})
+        nyeste_navn = metadata.get('nyesteNavn', {})
+        hovedbranche = metadata.get('nyesteHovedbranche', {})
+
+        # Ensure hovedbranche is a dictionary before accessing it
+        if hovedbranche is None:
+            hovedbranche = {}
+
+        formatted_company = {
+            "name": nyeste_navn.get('navn', "Unknown"),  # Safely get nested 'navn'
+            "cvr_number": cvr_number,
+            "industrycode": hovedbranche.get('branchekode', "Unknown"),
+            "industrytext": hovedbranche.get('branchetekst', "Unknown"),
+        }
+
+        companies.append(formatted_company)
+
+    return companies
+
+
+
 
 # Format company data
 def format_company_data(company, cvr_number):
