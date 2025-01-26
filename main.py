@@ -58,6 +58,17 @@ def search_company(companyName: str):
 def search_company_fuzzy(companyName: str):
     return search_cvr_by_fuzzy_name(companyName)
 
+@app.get("/api/v1/email/{email}")
+def search_email(email: str):
+    return search_cvr_by_email(email)
+
+@app.get("/api/v1/email_domain/{domain}")
+def search_email_domain(domain: str):
+    return search_cvr_by_email(domain)
+
+@app.get("/api/v1/phone/{phone}")
+def search_phone(phone: str):
+    return search_cvr_by_phone(phone)
 
 
 

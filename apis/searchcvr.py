@@ -123,6 +123,88 @@ def search_cvr_by_fuzzy_name(company_name):
 
 
 
+def search_cvr_by_email(email):
+    payload = json.dumps({
+        "_source": ["*"],
+        "query": {
+            "match": {
+                "Vrvirksomhed.elektroniskPost.kontaktoplysning": email
+            }
+        },
+        "size": 100  # Adjust the size as needed
+    })
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    json_response = response.json()
+
+    companies = []
+    for hit in json_response['hits']['hits']:
+        company = hit['_source']['Vrvirksomhed']
+        cvr_number = company['cvrNummer']
+        formatted_company = format_company_data(company, cvr_number)
+        companies.append(formatted_company)
+    return companies
+
+
+def search_cvr_by_email_domain(email_domain):
+    email = "@" + email_domain
+    payload = json.dumps({
+        "_source": ["*"],
+        "query": {
+            "match": {
+                "Vrvirksomhed.elektroniskPost.kontaktoplysning": email
+            }
+        },
+        "size": 100  # Adjust the size as needed
+    })
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    json_response = response.json()
+
+    companies = []
+    for hit in json_response['hits']['hits']:
+        company = hit['_source']['Vrvirksomhed']
+        cvr_number = company['cvrNummer']
+        formatted_company = format_company_data(company, cvr_number)
+        companies.append(formatted_company)
+    return companies
+
+
+def search_cvr_by_phone(phone_number):
+    payload = json.dumps({
+        "_source": ["*"],
+        "query": {
+            "match": {
+                "Vrvirksomhed.telefonNummer.kontaktoplysning": phone_number
+            }
+        },
+        "size": 100  # Adjust the size as needed
+    })
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    json_response = response.json()
+
+    companies = []
+    for hit in json_response['hits']['hits']:
+        company = hit['_source']['Vrvirksomhed']
+        cvr_number = company['cvrNummer']
+        formatted_company = format_company_data(company, cvr_number)
+        companies.append(formatted_company)
+    return companies
+
+
 
 # Format company data
 def format_company_data(company, cvr_number):
@@ -157,7 +239,6 @@ def format_company_data(company, cvr_number):
 def get_company_name(company):
     return company['virksomhedMetadata']['nyesteNavn']['navn']
 
-# Get combined address
 # Get combined address
 def get_combined_address(company):
     address = company['virksomhedMetadata']['nyesteBeliggenhedsadresse']
