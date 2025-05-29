@@ -1,12 +1,12 @@
-# API CVR er nu i beta.
+# API CVR
 
-Du kan finde det her [APICVR.dk](https://apicvr.dk).
-Docs: [APICVR Docs](https://apicvr.dk/docs)
-ReDoc: [APICVR ReDoc](https://apicvr.dk/redoc)
+Et simpelt REST‑API til opslag i CVR. En kørende version findes på [apicvr.dk](https://apicvr.dk).
+
+Dokumentation: [Docs](https://apicvr.dk/docs) · [ReDoc](https://apicvr.dk/redoc)
 
 # Hvad er API CVR?
 
-API CVR er sat i verden for at gøre livet lidt nemmere for udviklere, som skal lave en integration til CVR.
+API CVR gør det lettere at integrere med det danske CVR‑register. Koden er open source og forslag til forbedringer er meget velkomne.
 
 ## Hvorfor ikke bruge System-Til-System-adgang?
 
@@ -19,8 +19,14 @@ Hvis du nakker vores kode, så må du gerne kredittere os, men det betyder ikke 
 
 Hvis du mener dine Python-skills er bedre end vores slam-kode, så lav et pull request, så skal vi nok læse det igennem.
 
-# Opsæt din egen instans af API CVR
+# Opsæt din egen instans
 
-For at opsætte API CVR på din egen server, så skal du blot kopiere env.example til .env og smide dit Basic Auth token ind.Derefter kan du køre vores Docker Image
-Du skal rekvirere System-Til-System-Adgang til Erhvervsstyrelsen.
+1. Kopiér `env.example` til `.env` og indsæt dit API token.
+2. Start serveren med Docker:
+
+   ```bash
+   docker compose up --build
+   ```
+
+Du skal have System-Til-System-adgang fra Erhvervsstyrelsen for at kunne forespørge CVR.
 

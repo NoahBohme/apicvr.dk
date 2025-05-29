@@ -4,17 +4,18 @@ import json
 import re
 from dotenv import load_dotenv
 
-# Load .env file
-project_folder = os.path.expanduser('/code/app')
-load_dotenv(os.path.join(project_folder, '.env'))
-APITOKEN = os.getenv("API_TOKEN")
+# Load environment variables
+# Falls back to the current working directory if `.env` is not found
+load_dotenv()
+APITOKEN = os.getenv("API_TOKEN", "")
 
 
 # API endpoint
 url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
 
 # Make a POST request to system-til-system-adgang
-def search_cvr_api(cvr_number):
+def search_cvr_api(cvr_number: int) -> dict:
+    """Look up company information based on CVR number."""
     payload = json.dumps({
         "_source": ["Vrvirksomhed"],
         "query": {
@@ -28,7 +29,7 @@ def search_cvr_api(cvr_number):
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
     json_response = response.json()
 
     if json_response['hits']['total'] == 0:
@@ -37,7 +38,8 @@ def search_cvr_api(cvr_number):
         company = json_response['hits']['hits'][0]['_source']['Vrvirksomhed']
         return format_company_data(company, cvr_number)
 
-def search_cvr_by_name(company_name):
+def search_cvr_by_name(company_name: str) -> list:
+    """Search for companies matching the provided name."""
     payload = json.dumps({
         "_source": ["Vrvirksomhed"],
         "query": {
@@ -52,7 +54,7 @@ def search_cvr_by_name(company_name):
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
     json_response = response.json()
 
     
@@ -65,7 +67,8 @@ def search_cvr_by_name(company_name):
     return companies
 
 
-def search_cvr_by_fuzzy_name(company_name):
+def search_cvr_by_fuzzy_name(company_name: str) -> list:
+    """Return companies matching the name using fuzzy search."""
     # Define the payload for the multi_match query
     payload = json.dumps({
         "_source": ["Vrvirksomhed"],
@@ -86,7 +89,7 @@ def search_cvr_by_fuzzy_name(company_name):
     }
 
     # Send the POST request to Elasticsearch
-    response = requests.post(url, headers=headers, data=payload)
+    response = requests.post(url, headers=headers, data=payload, timeout=10)
 
     # Handle potential errors
     if response.status_code != 200:
@@ -123,7 +126,8 @@ def search_cvr_by_fuzzy_name(company_name):
 
 
 
-def search_cvr_by_email(email):
+def search_cvr_by_email(email: str) -> list:
+    """Find companies registered with the given email address."""
     payload = json.dumps({
         "_source": ["*"],
         "query": {
@@ -138,7 +142,7 @@ def search_cvr_by_email(email):
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
     json_response = response.json()
 
     companies = []
@@ -150,7 +154,8 @@ def search_cvr_by_email(email):
     return companies
 
 
-def search_cvr_by_email_domain(email_domain):
+def search_cvr_by_email_domain(email_domain: str) -> list:
+    """Search for companies by matching email domain."""
     email = "@" + email_domain
     payload = json.dumps({
         "_source": ["*"],
@@ -166,7 +171,7 @@ def search_cvr_by_email_domain(email_domain):
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
     json_response = response.json()
 
     companies = []
@@ -178,7 +183,8 @@ def search_cvr_by_email_domain(email_domain):
     return companies
 
 
-def search_cvr_by_phone(phone_number):
+def search_cvr_by_phone(phone_number: str) -> list:
+    """Locate companies by phone number."""
     payload = json.dumps({
         "_source": ["*"],
         "query": {
@@ -193,7 +199,7 @@ def search_cvr_by_phone(phone_number):
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
     json_response = response.json()
 
     companies = []
@@ -207,7 +213,8 @@ def search_cvr_by_phone(phone_number):
 
 
 # Format company data
-def format_company_data(company, cvr_number):
+def format_company_data(company: dict, cvr_number: str) -> dict:
+    """Convert raw company data to the API response schema."""
     company_data = {
         "vat": cvr_number,
         "name": get_company_name(company),
