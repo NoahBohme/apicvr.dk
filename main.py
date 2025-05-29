@@ -64,7 +64,7 @@ def search_email(email: str):
 
 @app.get("/api/v1/email_domain/{domain}")
 def search_email_domain(domain: str):
-    return search_cvr_by_email(domain)
+    return search_cvr_by_email_domain(domain)
 
 @app.get("/api/v1/phone/{phone}")
 def search_phone(phone: str):
