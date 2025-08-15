@@ -4,3 +4,5 @@ __pycache__
 .DS_Store
 frontend/.DS_Store
 frontend/templates/swagger/.DS_Store
+env
+app.db
