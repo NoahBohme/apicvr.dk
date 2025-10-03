@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import re
+from typing import Optional
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -210,6 +211,74 @@ def search_cvr_by_phone(phone_number: str) -> list:
         companies.append(formatted_company)
     return companies
 
+
+def search_cvr_by_address(address: str, postal_code: Optional[str] = None) -> list:
+    """Return companies registered on the provided street address."""
+    cleaned_address = address.strip()
+    if not cleaned_address:
+        return []
+
+    bool_query = {
+        "must": [
+            {
+                "multi_match": {
+                    "query": cleaned_address,
+                    "type": "phrase",
+                    "fields": [
+                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.fritekst^3",
+                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.adressebetegnelse^2",
+                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.vejnavn"
+                    ]
+                }
+            }
+        ],
+    }
+
+    filters = []
+
+    numeric_postal_code = None
+    if postal_code:
+        trimmed_postal = postal_code.strip()
+        if trimmed_postal:
+            numeric_postal_code = int(trimmed_postal) if trimmed_postal.isdigit() else trimmed_postal
+            filters.append({
+                "term": {
+                    "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.postnummer": numeric_postal_code
+                }
+            })
+
+    if filters:
+        bool_query["filter"] = filters
+
+    payload = json.dumps({
+        "_source": ["Vrvirksomhed"],
+        "query": {
+            "bool": bool_query
+        },
+        "size": 100
+    })
+
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
+
+    if response.status_code != 200:
+        raise Exception(f"Error querying Elasticsearch: {response.status_code}, {response.text}")
+
+    json_response = response.json()
+
+    companies = []
+    for hit in json_response.get('hits', {}).get('hits', []):
+        company = hit['_source'].get('Vrvirksomhed', {})
+        cvr_number = company.get('cvrNummer')
+        if not cvr_number:
+            continue
+        formatted_company = format_company_data(company, cvr_number)
+        companies.append(formatted_company)
+    return companies
 
 
 # Format company data
