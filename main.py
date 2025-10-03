@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
+from starlette.routing import NoMatchFound
 from app.modules.kapitalsog import show_capital_result
 
 app = FastAPI(
@@ -34,7 +35,20 @@ app.add_middleware(
 
 @app.get("/")
 async def home(request: Request):
-    return templates.TemplateResponse("/homepage.html", {"request": request})
+    base_url = str(request.base_url).rstrip("/")
+    try:
+        docs_url = request.url_for("swagger_ui_html")
+    except NoMatchFound:
+        docs_url = f"{base_url}/docs"
+
+    return templates.TemplateResponse(
+        "/homepage.html",
+        {
+            "request": request,
+            "base_url": base_url,
+            "docs_url": docs_url,
+        },
+    )
 
 @app.get("/da/search/")
 async def search_da(request: Request):
@@ -43,7 +57,17 @@ async def search_da(request: Request):
 
 @app.get("/da/virksomhed/{cvrNumber}")
 async def company_frontned(request: Request, cvrNumber: str):
-    return templates.TemplateResponse("/virksomhed.html", {"request": request, "cvrNumber": cvrNumber, "info": search_cvr_api(cvrNumber)})
+    try:
+        cvr_int = int(cvrNumber)
+    except ValueError:
+        info = {"error": "INVALID_CVR", "status": 400, "message": "CVR-nummer skal bestå af 8 cifre."}
+    else:
+        info = search_cvr_api(cvr_int)
+
+    return templates.TemplateResponse(
+        "/virksomhed.html",
+        {"request": request, "cvrNumber": cvrNumber, "info": info},
+    )
 
 
 @app.get("/api/v1/{cvrNumber}")

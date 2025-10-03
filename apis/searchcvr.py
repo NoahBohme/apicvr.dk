@@ -31,7 +31,21 @@ def search_cvr_api(cvr_number: int) -> dict:
     }
 
     response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
-    json_response = response.json()
+    if response.status_code != 200:
+        return {
+            "error": "HTTP_ERROR",
+            "status": response.status_code,
+            "message": response.text,
+        }
+
+    try:
+        json_response = response.json()
+    except ValueError:
+        return {
+            "error": "INVALID_RESPONSE",
+            "status": response.status_code,
+            "message": response.text,
+        }
 
     if json_response['hits']['total'] == 0:
         return {"error": "NOT_FOUND"}

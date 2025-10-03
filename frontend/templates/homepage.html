@@ -9,7 +9,7 @@
     <meta property="og:description" content="Det bedste gratis API til opslag i Det Centrale Virksomhedsregister. Open source, hurtig og pålidelig integration.">
     <meta property="og:type" content="website">
     <meta name="author" content="Noah Böhme">
-    <link rel="canonical" href="https://apicvr.dk">
+    <link rel="canonical" href="{{ base_url }}/">
     <title>CVR-API - Gratis Open Source API til Virksomhedsopslag i CVR-registret</title>
     <style>
         * {
@@ -343,7 +343,7 @@
             <h2>Kom i gang med CVR-API</h2>
             <p>Få adgang til omfattende CVR-data via vores simple REST API</p>
             <div class="cta-buttons">
-                <a href="https://apicvr.dk/docs" class="btn btn-primary">Læs Dokumentationen</a>
+                <a href="{{ docs_url }}" class="btn btn-primary">Læs Dokumentationen</a>
                 <a href="https://github.com/NoahBohme/apicvr.dk" class="btn btn-secondary">Se på GitHub</a>
             </div>
         </div>
@@ -405,6 +405,7 @@
     </div>
 
     <script>
+        const BASE_URL = "{{ base_url }}";
         const searchInput = document.getElementById('searchInput');
         const suggestionsContainer = document.getElementById('suggestions');
         let debounceTimer;
@@ -422,7 +423,7 @@
 
             // Check if input is a CVR number (8 digits)
             if (/^\d{8}$/.test(query)) {
-                window.location.href = `http://0.0.0.0:3450/da/virksomhed/${query}`;
+                window.location.href = `${BASE_URL}/da/virksomhed/${query}`;
                 return;
             }
 
@@ -440,7 +441,7 @@
 
         async function fetchCompanies(query) {
             try {
-                const response = await fetch(`http://0.0.0.0:3450/api/v1/fuzzy_search/company/${encodeURIComponent(query)}`);
+                const response = await fetch(`${BASE_URL}/api/v1/fuzzy_search/company/${encodeURIComponent(query)}`);
                 const companies = await response.json();
                 
                 displaySuggestions(companies.slice(0, 5));
@@ -470,7 +471,7 @@
         }
 
         function goToCompany(cvr) {
-            window.location.href = `http://0.0.0.0:3450/da/virksomhed/${cvr}`;
+            window.location.href = `${BASE_URL}/da/virksomhed/${cvr}`;
         }
 
         // Close suggestions when clicking outside

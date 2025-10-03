@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Virksomhedsoplysninger fra CVR">
-    <title>{{ info['name'] }} - CVR-API</title>
+    {% set has_error = info.get('error') %}
+    <title>{% if has_error %}Fejl ved opslag - CVR-API{% else %}{{ info['name'] }} - CVR-API{% endif %}</title>
     <style>
         * {
             margin: 0;
@@ -180,6 +181,31 @@
             content: "← ";
         }
 
+        .error-box {
+            background: white;
+            padding: 50px 60px;
+            border-radius: 2px;
+            border-left: 4px solid #d32f2f;
+            text-align: center;
+        }
+
+        .error-box h1 {
+            font-size: 2em;
+            margin-bottom: 16px;
+            color: #2c3e50;
+            font-weight: 400;
+        }
+
+        .error-box p {
+            color: #546e7a;
+            margin-bottom: 18px;
+        }
+
+        .error-details {
+            font-size: 0.9em;
+            color: #90a4ae;
+        }
+
         @media (max-width: 768px) {
             .header {
                 padding: 40px 30px;
@@ -206,71 +232,79 @@
 </head>
 <body>
     <div class="container">
-        <a href="https://apicvr.dk" class="back-link">Tilbage til forsiden</a>
-        
-        <div class="header">
-            <h1>{{ info['name'] }}</h1>
+        {% if has_error %}
+            <div class="error-box">
+                <h1>Kunne ikke hente virksomhedsoplysninger</h1>
+                <p>Der opstod en fejl under opslaget. Prøv igen senere eller kontakt support, hvis problemet fortsætter.</p>
+                <p class="error-details">Fejlkode: {{ info['error'] }}{% if info.get('status') %} · Status: {{ info['status'] }}{% endif %}</p>
+            </div>
+        {% else %}
+            <a href="https://apicvr.dk" class="back-link">Tilbage til forsiden</a>
             
-            {% set reklamebeskyttelset = info['protected'] %}
-            {% if reklamebeskyttelset == true %}
-                <div class="protection-badge protected">Reklamebeskyttet</div>
-                <br>
-                <a href="https://datacvr.virk.dk/artikel/reklamebeskyttelse" class="protection-link">Læs mere om vilkår for reklamebeskyttelse</a>
-            {% else %}
-                <div class="protection-badge not-protected">Ikke reklamebeskyttet</div>
-            {% endif %}
-        </div>
+            <div class="header">
+                <h1>{{ info['name'] }}</h1>
+                
+                {% set reklamebeskyttelset = info['protected'] %}
+                {% if reklamebeskyttelset == true %}
+                    <div class="protection-badge protected">Reklamebeskyttet</div>
+                    <br>
+                    <a href="https://datacvr.virk.dk/artikel/reklamebeskyttelse" class="protection-link">Læs mere om vilkår for reklamebeskyttelse</a>
+                {% else %}
+                    <div class="protection-badge not-protected">Ikke reklamebeskyttet</div>
+                {% endif %}
+            </div>
 
-        <div class="cards-grid">
-            <div class="card">
-                <div class="card-header">
-                    <h2>Grundlæggende oplysninger</h2>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Grundlæggende oplysninger</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-item">
+                            <span class="info-label">Virksomhedsnavn</span>
+                            <span class="info-value">{{ info['name'] }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">CVR-nummer</span>
+                            <span class="info-value">{{ info['vat'] }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Startdato</span>
+                            <span class="info-value">{{ info['startdate'] }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Adresse</span>
+                            <span class="info-value">{{ info['address'] }} {{ info['zipcode'] }}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="info-item">
-                        <span class="info-label">Virksomhedsnavn</span>
-                        <span class="info-value">{{ info['name'] }}</span>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Virksomhedsdetaljer</h2>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">CVR-nummer</span>
-                        <span class="info-value">{{ info['vat'] }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Startdato</span>
-                        <span class="info-value">{{ info['startdate'] }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Adresse</span>
-                        <span class="info-value">{{ info['address'] }} {{ info['zipcode'] }}</span>
+                    <div class="card-body">
+                        <div class="info-item">
+                            <span class="info-label">Status</span>
+                            <span class="info-value">{{ info['status'] }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Branche</span>
+                            <span class="info-value">{{ info['industrydesc'] }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Virksomhedsform</span>
+                            <span class="info-value">{{ info['companydesc'] }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2>Virksomhedsdetaljer</h2>
-                </div>
-                <div class="card-body">
-                    <div class="info-item">
-                        <span class="info-label">Status</span>
-                        <span class="info-value">{{ info['status'] }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Branche</span>
-                        <span class="info-value">{{ info['industrydesc'] }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Virksomhedsform</span>
-                        <span class="info-value">{{ info['companydesc'] }}</span>
-                    </div>
-                </div>
+            <div class="api-section">
+                <h3>API Endpoint</h3>
+                <a href="https://apicvr.dk/api/v1/{{ info['vat'] }}" class="api-link">https://apicvr.dk/api/v1/{{ info['vat'] }}</a>
             </div>
-        </div>
-
-        <div class="api-section">
-            <h3>API Endpoint</h3>
-            <a href="https://apicvr.dk/api/v1/{{ info['vat'] }}" class="api-link">https://apicvr.dk/api/v1/{{ info['vat'] }}</a>
-        </div>
+        {% endif %}
     </div>
 </body>
 </html>
