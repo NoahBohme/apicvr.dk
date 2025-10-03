@@ -1,52 +1,484 @@
+<!DOCTYPE html>
 <html lang="da">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="Gratis open source API til opslag i CVR" />
-        <title>CVR-API</title>
-    </head>
-    <body>
-        <div>
-            <h1>CVR-API (Beta)</h1>
-            <p>
-                This is a simple API for the CVR-system.
-            </p>
-            <p>The API is created by <a href="https://noahbohme.com">Noah Böhme</a></p>
-            <p>This a a open-source project on <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a></p> <br>
-            <p>Docs here: <a href="https://apicvr.dk/docs">Docs</a></p> <br>
-            
-        </div> <br>
-        <div class="cvrRules">
-            <h4>
-                Disclaimer:
-                Alle brugere i CVR skal overholde reglerne om reklamebeskyttelse.
-            </h4>
-            <p>
-                Virksomheder kan frabede sig reklamehenvendelser. Alle brugere i CVR skal opfylde følgende betingelser:
-                    <br>
-                    - Ønsket om reklamebeskyttelse vil blive respekteret. <br>
-                    - at de oplysninger, der er registeret om en reklamebeskyttet virksomhed eller p-enhed i CVR, ikke må bruges til direkte markedsføring, hvilket indebærer direkte kundekontakt som fx telefonopkald, målrettede postudsendelser m.v. <br>
-                    - at modtageren ved videregivelse af oplysninger om beskyttede enheder til tredjemand tydeligt markerer, at virksomheden eller p-enheden er beskyttet. <br>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Gratis open source CVR-API til virksomhedsopslag i Det Centrale Virksomhedsregister. Hurtig, pålidelig og let at integrere i din applikation. Hent CVR-data via REST API.">
+    <meta name="keywords" content="CVR API, virksomhedsopslag, CVR-register, danske virksomheder, company lookup, REST API, open source API, gratis API, CVR-nummer, virksomhedsdata">
+    <meta property="og:title" content="CVR-API - Gratis Open Source API til CVR-opslag">
+    <meta property="og:description" content="Det bedste gratis API til opslag i Det Centrale Virksomhedsregister. Open source, hurtig og pålidelig integration.">
+    <meta property="og:type" content="website">
+    <meta name="author" content="Noah Böhme">
+    <link rel="canonical" href="https://apicvr.dk">
+    <title>CVR-API - Gratis Open Source API til Virksomhedsopslag i CVR-registret</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-                <b><i>Ovenstående følger af CVR-lovens bestemmelser, jf. § 19 og § 22.</i></b>
-            </p>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.7;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            background: white;
+            border-radius: 2px;
+            padding: 80px 60px;
+            margin-bottom: 40px;
+            border-top: 4px solid #2c3e50;
+        }
+
+        h1 {
+            font-size: 3.2em;
+            color: #2c3e50;
+            margin-bottom: 24px;
+            font-weight: 300;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.25em;
+            color: #546e7a;
+            margin-bottom: 50px;
+            font-weight: 400;
+            max-width: 700px;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            padding: 50px;
+            border-radius: 2px;
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            color: white;
+            font-size: 2em;
+            font-weight: 400;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            color: #ecf0f1;
+            font-size: 1.1em;
+            margin-bottom: 35px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 18px 42px;
+            font-size: 1.1em;
+            border-radius: 2px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-block;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #2c3e50;
+        }
+
+        .btn-primary:hover {
+            background: #ecf0f1;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .demo-section {
+            background: white;
+            padding: 60px;
+            border-radius: 2px;
+            margin-bottom: 40px;
+        }
+
+        .demo-section h2 {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-weight: 400;
+        }
+
+        .demo-subtitle {
+            color: #546e7a;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 18px 24px;
+            font-size: 1em;
+            border: 2px solid #e0e0e0;
+            border-radius: 2px;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
+            background: #fafafa;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #2c3e50;
+            background: white;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #2c3e50;
+            border-top: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease;
+            z-index: 1000;
+        }
+
+        .suggestions.active {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .suggestion-item {
+            padding: 16px 24px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: #f8f9fa;
+        }
+
+        .suggestion-name {
+            color: #2c3e50;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .suggestion-details {
+            font-size: 0.85em;
+            color: #78909c;
+        }
+
+        .suggestion-cvr {
+            color: #546e7a;
+            font-weight: 500;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1px;
+            background: #e0e0e0;
+            margin-bottom: 40px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .feature {
+            background: white;
+            padding: 35px 30px;
+            transition: background 0.2s ease;
+        }
+
+        .feature:hover {
+            background: #f8f9fa;
+        }
+
+        .feature h3 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .feature p {
+            color: #546e7a;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .disclaimer {
+            background: white;
+            border-radius: 2px;
+            padding: 50px 60px;
+            border-left: 4px solid #d32f2f;
+        }
+
+        .disclaimer h2 {
+            color: #2c3e50;
+            margin-bottom: 24px;
+            font-size: 1.6em;
+            font-weight: 400;
+        }
+
+        .disclaimer-content {
+            color: #546e7a;
+            line-height: 1.8;
+            font-size: 0.95em;
+        }
+
+        .disclaimer-content ul {
+            margin: 24px 0;
+            padding-left: 24px;
+            list-style: none;
+        }
+
+        .disclaimer-content li {
+            margin: 12px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .disclaimer-content li:before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: #d32f2f;
+        }
+
+        .disclaimer-content strong {
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            color: #78909c;
+            font-size: 0.9em;
+            padding: 30px 0;
+        }
+
+        .footer a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid #cfd8dc;
+            transition: border-color 0.2s ease;
+        }
+
+        .footer a:hover {
+            border-bottom-color: #2c3e50;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2em;
+            }
+
+            .subtitle {
+                font-size: 1.1em;
+            }
+
+            .hero, .demo-section, .disclaimer, .cta-section {
+                padding: 40px 30px;
+            }
+
+            .cta-section h2 {
+                font-size: 1.5em;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .btn {
+                padding: 16px 32px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>CVR-API</h1>
+            <p class="subtitle">Gratis open source API til virksomhedsopslag i Det Centrale Virksomhedsregister</p>
         </div>
-        <style>
-            body{
-                background-color: #f5f5f5;
-                margin-left: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
+
+        <div class="cta-section">
+            <h2>Kom i gang med CVR-API</h2>
+            <p>Få adgang til omfattende CVR-data via vores simple REST API</p>
+            <div class="cta-buttons">
+                <a href="https://apicvr.dk/docs" class="btn btn-primary">Læs Dokumentationen</a>
+                <a href="https://github.com/NoahBohme/apicvr.dk" class="btn btn-secondary">Se på GitHub</a>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>Prøv API'et</h2>
+            <p class="demo-subtitle">Søg på virksomhedsnavn eller indtast et CVR-nummer direkte</p>
+            
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Søg virksomhed eller indtast CVR-nummer..."
+                    autocomplete="off"
+                />
+                <div id="suggestions" class="suggestions"></div>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>Lynhurtig</h3>
+                <p>Få CVR-data på millisekunder med vores optimerede REST API</p>
+            </div>
+            <div class="feature">
+                <h3>Open Source</h3>
+                <p>Fuldstændig gratis og transparent kildekode på GitHub</p>
+            </div>
+            <div class="feature">
+                <h3>Pålidelig</h3>
+                <p>Troværdige data direkte fra CVR-registret</p>
+            </div>
+            <div class="feature">
+                <h3>Let Integration</h3>
+                <p>Simpel REST API med omfattende dokumentation</p>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            <h2>Vigtig information om reklamebeskyttelse</h2>
+            <div class="disclaimer-content">
+                <p>Alle brugere af CVR-API skal overholde reglerne om reklamebeskyttelse i henhold til CVR-loven.</p>
+                
+                <p><strong>Virksomheder kan frabede sig reklamehenvendelser.</strong> Som bruger forpligter du dig til:</p>
+                
+                <ul>
+                    <li>At respektere virksomheders ønske om reklamebeskyttelse</li>
+                    <li>At oplysninger om reklamebeskyttede virksomheder eller p-enheder ikke må bruges til direkte markedsføring, herunder telefonopkald, målrettede postudsendelser og lignende</li>
+                    <li>At markere tydeligt ved videregivelse til tredjemand, at en virksomhed eller p-enhed er beskyttet</li>
+                </ul>
+
+                <p><strong>Disse forpligtelser følger af CVR-lovens § 19 og § 22.</strong> Overtrædelse af disse regler kan medføre juridiske konsekvenser.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Udviklet af <a href="https://noahbohme.com">Noah Böhme</a> · Open source projekt · <a href="https://github.com/NoahBohme/apicvr.dk">Bidrag på GitHub</a></p>
+        </div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsContainer = document.getElementById('suggestions');
+        let debounceTimer;
+
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            
+            clearTimeout(debounceTimer);
+            
+            if (query.length === 0) {
+                suggestionsContainer.classList.remove('active');
+                suggestionsContainer.innerHTML = '';
+                return;
             }
-            div.cvrRules{
-                display: flex;
-                border: 1px solid black;
-                padding: 10px;
-                margin: 10px;
-                margin-right: 50px;
-                max-width: 800px;
+
+            // Check if input is a CVR number (8 digits)
+            if (/^\d{8}$/.test(query)) {
+                window.location.href = `http://0.0.0.0:3450/da/virksomhed/${query}`;
+                return;
             }
-        </style>
-    </body>
+
+            // Only search if at least 2 characters
+            if (query.length < 2) {
+                suggestionsContainer.classList.remove('active');
+                suggestionsContainer.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetchCompanies(query);
+            }, 300);
+        });
+
+        async function fetchCompanies(query) {
+            try {
+                const response = await fetch(`http://0.0.0.0:3450/api/v1/fuzzy_search/company/${encodeURIComponent(query)}`);
+                const companies = await response.json();
+                
+                displaySuggestions(companies.slice(0, 5));
+            } catch (error) {
+                console.error('Error fetching companies:', error);
+                suggestionsContainer.classList.remove('active');
+            }
+        }
+
+        function displaySuggestions(companies) {
+            if (companies.length === 0) {
+                suggestionsContainer.classList.remove('active');
+                suggestionsContainer.innerHTML = '';
+                return;
+            }
+
+            suggestionsContainer.innerHTML = companies.map(company => `
+                <div class="suggestion-item" onclick="goToCompany(${company.cvr_number})">
+                    <div class="suggestion-name">${company.name}</div>
+                    <div class="suggestion-details">
+                        <span class="suggestion-cvr">CVR: ${company.cvr_number}</span> · ${company.industrytext}
+                    </div>
+                </div>
+            `).join('');
+
+            suggestionsContainer.classList.add('active');
+        }
+
+        function goToCompany(cvr) {
+            window.location.href = `http://0.0.0.0:3450/da/virksomhed/${cvr}`;
+        }
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.classList.remove('active');
+            }
+        });
+    </script>
+</body>
 </html>

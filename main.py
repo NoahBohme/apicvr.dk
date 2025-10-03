@@ -71,6 +71,11 @@ def search_phone(phone: str):
     return search_cvr_by_phone(phone)
 
 
+@app.get("/api/v1/search/address")
+def search_address(address: str, postal_code: str = None):
+    return search_cvr_by_address(address, postal_code)
+
+
 
 # Search in registeringshistorik after capital raise
 

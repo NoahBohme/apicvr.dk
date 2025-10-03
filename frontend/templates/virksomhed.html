@@ -1,68 +1,276 @@
+<!DOCTYPE html>
 <html lang="da">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="Virksomhedsoplysninger fra CVR" />
-        <title>CVR-API</title>
-         <!-- Latest compiled and minified CSS -->
-         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Virksomhedsoplysninger fra CVR">
+    <title>{{ info['name'] }} - CVR-API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-         <!-- jQuery library -->
-         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
- 
-         <!-- Latest compiled JavaScript -->
-         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script> 
-    </head>
-    <body>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.7;
+            color: #2c3e50;
+        }
 
-        <h1>{{ info['name'] }}</h1>
-        {% set reklamebeskyttelset = info['protected'] %}
-        {% if reklamebeskyttelset == true %}
-            {# the if part #}
-            <h4 style="color: red">Reklamebeskyttet</h4>
-            <a href="https://datacvr.virk.dk/artikel/reklamebeskyttelse"><p>Læs mere om vilkår for reklamebeskyttelse</p></a>
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 50px 60px;
+            margin-bottom: 40px;
+            border-top: 4px solid #2c3e50;
+            border-radius: 2px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+        }
+
+        .protection-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 2px;
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .protection-badge.protected {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        .protection-badge.not-protected {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .protection-link {
+            color: #546e7a;
+            text-decoration: none;
+            font-size: 0.9em;
+            border-bottom: 1px solid #cfd8dc;
+            transition: border-color 0.2s ease;
+        }
+
+        .protection-link:hover {
+            border-bottom-color: #2c3e50;
+            color: #2c3e50;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 24px 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .card-header h2 {
+            font-size: 1.3em;
+            color: #2c3e50;
+            font-weight: 400;
+        }
+
+        .card-body {
+            padding: 0;
+        }
+
+        .info-item {
+            padding: 18px 30px;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 0.85em;
+            color: #78909c;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 1em;
+            color: #2c3e50;
+        }
+
+        .api-section {
+            background: white;
+            padding: 30px;
+            border-radius: 2px;
+            border-left: 4px solid #2c3e50;
+        }
+
+        .api-section h3 {
+            font-size: 1.1em;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .api-link {
+            display: inline-block;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            color: #2c3e50;
+            text-decoration: none;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s ease;
+            word-break: break-all;
+        }
+
+        .api-link:hover {
+            background: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #546e7a;
+            text-decoration: none;
+            font-size: 0.95em;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: #2c3e50;
+        }
+
+        .back-link:before {
+            content: "← ";
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 40px 30px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card-header, .info-item {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+
+            .api-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="https://apicvr.dk" class="back-link">Tilbage til forsiden</a>
+        
+        <div class="header">
+            <h1>{{ info['name'] }}</h1>
+            
+            {% set reklamebeskyttelset = info['protected'] %}
+            {% if reklamebeskyttelset == true %}
+                <div class="protection-badge protected">Reklamebeskyttet</div>
+                <br>
+                <a href="https://datacvr.virk.dk/artikel/reklamebeskyttelse" class="protection-link">Læs mere om vilkår for reklamebeskyttelse</a>
             {% else %}
-            <h4 style="color: green">Ikke reklamebeskyttet</h4>
-            {# the else part #}
-        {% endif %}
-        <div class="col-sm-12">
-            <div class="card" style="width: 18rem;">
-                <ul class="list-group list-group-flush">
-                <li class="list-group-item"><b>Virksomhedsnavn: </b>{{ info['name'] }}</li>
-                <li class="list-group-item"><b>CVR-nummer: </b>{{ info['vat'] }}</li>
-                <li class="list-group-item"><b>Startdato: </b>{{ info['startdate'] }}</li>
-                <li class="list-group-item"><b>Adresse: </b>{{ info['address'] }} {{ info['zipcode'] }}</li>
-                </ul>
+                <div class="protection-badge not-protected">Ikke reklamebeskyttet</div>
+            {% endif %}
+        </div>
+
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Grundlæggende oplysninger</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <span class="info-label">Virksomhedsnavn</span>
+                        <span class="info-value">{{ info['name'] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">CVR-nummer</span>
+                        <span class="info-value">{{ info['vat'] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Startdato</span>
+                        <span class="info-value">{{ info['startdate'] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Adresse</span>
+                        <span class="info-value">{{ info['address'] }} {{ info['zipcode'] }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="card" style="width: 18rem;">
-                <ul class="list-group list-group-flush">
-                <h4>Virksomhed</h4>
-                <li class="list-group-item"><b>Status: </b>{{ info['status'] }}</li>
-                <li class="list-group-item"><b>Branche: </b>{{ info['industrydesc'] }}</li>
-                <li class="list-group-item"><b>Virksomhedsform: </b>{{ info['companydesc'] }}</li>
-                </ul>
-            </div>
-            <div>
-                <b>API: <a href="https://apicvr.dk/api/v1/{{ info['vat'] }}">https://apicvr.dk/api/v1/{{ info['vat'] }}</a></b>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Virksomhedsdetaljer</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <span class="info-label">Status</span>
+                        <span class="info-value">{{ info['status'] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Branche</span>
+                        <span class="info-value">{{ info['industrydesc'] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Virksomhedsform</span>
+                        <span class="info-value">{{ info['companydesc'] }}</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-
-        
-        
-    
-        <style>
-            body{
-                background-color: #f5f5f5;
-                margin-left: 20px;
-            }
-            div.cvrRules{
-                border: 1px solid black;
-                padding: 10px;
-                margin: 10px;
-                margin-right: 50px;
-                max-width: 800px;
-            }
-        </style>
-    </body>
+        <div class="api-section">
+            <h3>API Endpoint</h3>
+            <a href="https://apicvr.dk/api/v1/{{ info['vat'] }}" class="api-link">https://apicvr.dk/api/v1/{{ info['vat'] }}</a>
+        </div>
+    </div>
+</body>
 </html>

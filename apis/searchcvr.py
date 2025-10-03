@@ -218,25 +218,10 @@ def search_cvr_by_address(address: str, postal_code: Optional[str] = None) -> li
     if not cleaned_address:
         return []
 
-    bool_query = {
-        "must": [
-            {
-                "multi_match": {
-                    "query": cleaned_address,
-                    "type": "phrase",
-                    "fields": [
-                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.fritekst^3",
-                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.adressebetegnelse^2",
-                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.vejnavn"
-                    ]
-                }
-            }
-        ],
-    }
+    components = _parse_address_components(cleaned_address)
 
     filters = []
 
-    numeric_postal_code = None
     if postal_code:
         trimmed_postal = postal_code.strip()
         if trimmed_postal:
@@ -247,29 +232,40 @@ def search_cvr_by_address(address: str, postal_code: Optional[str] = None) -> li
                 }
             })
 
-    if filters:
-        bool_query["filter"] = filters
-
-    payload = json.dumps({
-        "_source": ["Vrvirksomhed"],
-        "query": {
-            "bool": bool_query
-        },
-        "size": 100
-    })
-
     headers = {
         'Authorization': 'Basic ' + APITOKEN,
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
+    queries = []
 
-    if response.status_code != 200:
-        raise Exception(f"Error querying Elasticsearch: {response.status_code}, {response.text}")
+    exact_query = _build_exact_address_query(cleaned_address, filters)
+    if exact_query:
+        queries.append(exact_query)
 
-    json_response = response.json()
+    structured_query = _build_structured_address_query(components, filters)
+    if structured_query:
+        queries.append(structured_query)
 
+    queries.append(_build_fuzzy_address_query(cleaned_address, filters))
+
+    for query in queries:
+        payload = json.dumps(query)
+        response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
+
+        if response.status_code != 200:
+            raise Exception(f"Error querying Elasticsearch: {response.status_code}, {response.text}")
+
+        json_response = response.json()
+        companies = _extract_companies_from_hits(json_response)
+
+        if companies:
+            return companies
+
+    return []
+
+
+def _extract_companies_from_hits(json_response: dict) -> list:
     companies = []
     for hit in json_response.get('hits', {}).get('hits', []):
         company = hit['_source'].get('Vrvirksomhed', {})
@@ -281,9 +277,141 @@ def search_cvr_by_address(address: str, postal_code: Optional[str] = None) -> li
     return companies
 
 
+def _build_exact_address_query(cleaned_address: str, filters: list) -> Optional[dict]:
+    if not cleaned_address:
+        return None
+
+    bool_query = {
+        "must": [
+            {
+                "match_phrase": {
+                    "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.adressebetegnelse": cleaned_address
+                }
+            }
+        ]
+    }
+
+    if filters:
+        bool_query["filter"] = filters
+
+    return {
+        "_source": ["Vrvirksomhed"],
+        "query": {"bool": bool_query},
+        "size": 100
+    }
+
+
+def _build_structured_address_query(components: dict, filters: list) -> Optional[dict]:
+    street = components.get("street")
+    number = components.get("number")
+    letter = components.get("letter")
+
+    if not street or number is None:
+        return None
+
+    must_clauses = [
+        {
+            "match_phrase": {
+                "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.vejnavn": street
+            }
+        },
+        {
+            "term": {
+                "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.husnummerFra": number
+            }
+        }
+    ]
+
+    if letter:
+        must_clauses.append({
+            "term": {
+                "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.bogstavFra": letter
+            }
+        })
+
+    bool_query = {"must": must_clauses}
+
+    if filters:
+        bool_query["filter"] = filters
+
+    return {
+        "_source": ["Vrvirksomhed"],
+        "query": {"bool": bool_query},
+        "size": 100
+    }
+
+
+def _build_fuzzy_address_query(cleaned_address: str, filters: list) -> dict:
+    bool_query = {
+        "must": [
+            {
+                "multi_match": {
+                    "query": cleaned_address,
+                    "fields": [
+                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.adressebetegnelse^3",
+                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.fritekst^2",
+                        "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse.vejnavn"
+                    ],
+                    "fuzziness": "AUTO",
+                    "type": "best_fields",
+                    "operator": "or"
+                }
+            }
+        ]
+    }
+
+    if filters:
+        bool_query["filter"] = filters
+
+    return {
+        "_source": ["Vrvirksomhed"],
+        "query": {"bool": bool_query},
+        "size": 100
+    }
+
+
+def _parse_address_components(address: str) -> dict:
+    components = {
+        "street": None,
+        "number": None,
+        "letter": None,
+    }
+
+    main_part, _, _ = address.partition(',')
+    main_part = main_part.strip()
+
+    if not main_part:
+        return components
+
+    match = re.match(r"^(?P<street>[^0-9]+?)\s+(?P<number>\d+)(?:\s*(?P<letter>[A-Za-z]))?$", main_part)
+
+    if not match:
+        return components
+
+    street = match.group('street').strip()
+    number = match.group('number')
+    raw_letter = match.group('letter')
+    letter = raw_letter.upper() if raw_letter else None
+
+    components["street"] = street if street else None
+    components["number"] = int(number) if number else None
+    components["letter"] = letter
+
+    return components
+
+
 # Format company data
 def format_company_data(company: dict, cvr_number: str) -> dict:
     """Convert raw company data to the API response schema."""
+    metadata = company.get('virksomhedMetadata') or {}
+    hovedbranche = metadata.get('nyesteHovedbranche') or {}
+    virksomhedsform = metadata.get('nyesteVirksomhedsform') or {}
+
+    livsforloeb = company.get('livsforloeb') or []
+    first_period = {}
+    if livsforloeb and isinstance(livsforloeb[0], dict):
+        first_period = livsforloeb[0].get('periode') or {}
+
     company_data = {
         "vat": cvr_number,
         "name": get_company_name(company),
@@ -295,17 +423,17 @@ def format_company_data(company: dict, cvr_number: str) -> dict:
         "phone": get_phone_number(company),
         "email": get_email(company),
         "fax": company.get('telefaxNummer'),
-        "startdate": get_formatted_date(company['virksomhedMetadata']['stiftelsesDato']),
-        "enddate": get_formatted_date(company['livsforloeb'][0]['periode']['gyldigTil']) if 'gyldigTil' in company['livsforloeb'][0]['periode'] else None,
+        "startdate": get_formatted_date(metadata.get('stiftelsesDato')),
+        "enddate": get_formatted_date(first_period.get('gyldigTil')),
         "employees": get_employees(company),
         "addressco": get_address_field(company, 'conavn'),
-        "industrycode": company['virksomhedMetadata']['nyesteHovedbranche']['branchekode'],
-        "industrydesc": company['virksomhedMetadata']['nyesteHovedbranche']['branchetekst'],
-        "companycode": company['virksomhedMetadata']['nyesteVirksomhedsform']['virksomhedsformkode'],
-        "companydesc": company['virksomhedMetadata']['nyesteVirksomhedsform']['langBeskrivelse'],
+        "industrycode": hovedbranche.get('branchekode'),
+        "industrydesc": hovedbranche.get('branchetekst'),
+        "companycode": virksomhedsform.get('virksomhedsformkode'),
+        "companydesc": virksomhedsform.get('langBeskrivelse'),
         "bankrupt": is_bankrupt(company),
-        "status": company['virksomhedMetadata']['sammensatStatus'],
-        "companytypeshort": company['virksomhedMetadata']['nyesteVirksomhedsform']['kortBeskrivelse'],
+        "status": metadata.get('sammensatStatus'),
+        "companytypeshort": virksomhedsform.get('kortBeskrivelse'),
         "website": get_website(company),
         "version": 1
     }
@@ -313,12 +441,20 @@ def format_company_data(company: dict, cvr_number: str) -> dict:
 
 # Get company name
 def get_company_name(company):
-    return company['virksomhedMetadata']['nyesteNavn']['navn']
+    metadata = company.get('virksomhedMetadata') or {}
+    navn = metadata.get('nyesteNavn') or {}
+    return navn.get('navn')
 
 # Get combined address
 def get_combined_address(company):
-    address = company['virksomhedMetadata']['nyesteBeliggenhedsadresse']
-    combined_address = f"{address['vejnavn']} {address.get('husnummerFra', '')}"
+    metadata = company.get('virksomhedMetadata') or {}
+    address = metadata.get('nyesteBeliggenhedsadresse') or {}
+
+    vejnavn = address.get('vejnavn', '')
+    if not vejnavn:
+        return None
+
+    combined_address = f"{vejnavn} {address.get('husnummerFra', '')}".rstrip()
 
     if address.get('husnummerTil'):
         combined_address += f"-{address['husnummerTil']}"
@@ -335,7 +471,8 @@ def get_combined_address(company):
 
 # Get specific field from address
 def get_address_field(company, field):
-    address = company['virksomhedMetadata']['nyesteBeliggenhedsadresse']
+    metadata = company.get('virksomhedMetadata') or {}
+    address = metadata.get('nyesteBeliggenhedsadresse') or {}
     return address.get(field)
 
 # Get formatted date
@@ -347,19 +484,28 @@ def get_formatted_date(date):
 
 # Get phone number
 def get_phone_number(company):
-    contact_info = company['virksomhedMetadata']['nyesteKontaktoplysninger']
+    metadata = company.get('virksomhedMetadata') or {}
+    contact_info = metadata.get('nyesteKontaktoplysninger')
+    if not contact_info:
+        return None
     phone = re.findall(r'\b\d{8}\b', str(contact_info))
     return phone[0] if phone else None
 
 # Get email
 def get_email(company):
-    contact_info = company['virksomhedMetadata']['nyesteKontaktoplysninger']
+    metadata = company.get('virksomhedMetadata') or {}
+    contact_info = metadata.get('nyesteKontaktoplysninger')
+    if not contact_info:
+        return None
     email = re.findall(r'\b[\w.-]+@[\w.-]+\b', str(contact_info))
     return email[0] if email else None
 
 # Get website
 def get_website(company):
-    contact_info = company['virksomhedMetadata']['nyesteKontaktoplysninger']
+    metadata = company.get('virksomhedMetadata') or {}
+    contact_info = metadata.get('nyesteKontaktoplysninger')
+    if not contact_info:
+        return None
     website = re.findall(r'\bhttp[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\b', str(contact_info))
     return website[0] if website else None
 
