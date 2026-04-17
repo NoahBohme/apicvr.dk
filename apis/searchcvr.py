@@ -13,6 +13,7 @@ APITOKEN = os.getenv("API_TOKEN", "")
 
 # API endpoint
 url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
+url_p = "http://distribution.virk.dk/cvr-permanent/produktionsenhed/_search"
 
 # Make a POST request to system-til-system-adgang
 def search_cvr_api(cvr_number: int) -> dict:
@@ -51,7 +52,57 @@ def search_cvr_api(cvr_number: int) -> dict:
         return {"error": "NOT_FOUND"}
     else:
         company = json_response['hits']['hits'][0]['_source']['Vrvirksomhed']
-        return format_company_data(company, cvr_number)
+        company_data = format_company_data(company, cvr_number)
+
+        penheder = company.get('penheder') or []
+        p_numbers = [
+            p['pNummer']
+            for p in penheder
+            if isinstance(p, dict) and p.get('pNummer')
+        ]
+        company_data['p_units'] = fetch_p_units(p_numbers)
+
+        return company_data
+
+def fetch_p_units(p_numbers: list) -> list:
+    """Fetch full production-unit detail for each P-number. Returns [] on any error."""
+    if not p_numbers:
+        return []
+
+    payload = json.dumps({
+        "_source": ["VrproduktionsEnhed"],
+        "query": {
+            "terms": {
+                "VrproduktionsEnhed.pNummer": p_numbers
+            }
+        },
+        "size": 1000
+    })
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.post(url_p, headers=headers, data=payload, timeout=10)
+    except requests.RequestException:
+        return []
+
+    if response.status_code != 200:
+        return []
+
+    try:
+        json_response = response.json()
+    except ValueError:
+        return []
+
+    hits = json_response.get('hits', {}).get('hits', [])
+    p_units = []
+    for hit in hits:
+        p_unit = hit.get('_source', {}).get('VrproduktionsEnhed')
+        if p_unit:
+            p_units.append(format_p_unit_data(p_unit))
+    return p_units
 
 def search_cvr_by_name(company_name: str) -> list:
     """Search for companies matching the provided name."""
@@ -414,6 +465,36 @@ def _parse_address_components(address: str) -> dict:
     return components
 
 
+def format_p_unit_data(p_unit: dict) -> dict:
+    """Convert raw production-unit data to the API response schema."""
+    metadata = p_unit.get('produktionsEnhedMetadata') or {}
+    hovedbranche = metadata.get('nyesteHovedbranche') or {}
+
+    livsforloeb = p_unit.get('livsforloeb') or []
+    first_period = {}
+    if livsforloeb and isinstance(livsforloeb[0], dict):
+        first_period = livsforloeb[0].get('periode') or {}
+
+    return {
+        "p_number": p_unit.get('pNummer'),
+        "name": get_name(metadata),
+        "address": get_combined_address(metadata),
+        "zipcode": get_address_field(metadata, 'postnummer'),
+        "city": get_address_field(metadata, 'postdistrikt'),
+        "cityname": get_address_field(metadata, 'bynavn'),
+        "addressco": get_address_field(metadata, 'conavn'),
+        "phone": get_phone_number(metadata),
+        "email": get_email(metadata),
+        "website": get_website(metadata),
+        "fax": p_unit.get('telefaxNummer'),
+        "startdate": get_formatted_date(first_period.get('gyldigFra')),
+        "enddate": get_formatted_date(first_period.get('gyldigTil')),
+        "industrycode": hovedbranche.get('branchekode'),
+        "industrydesc": hovedbranche.get('branchetekst'),
+        "employees": get_employees(metadata),
+        "protected": p_unit.get('reklamebeskyttet'),
+    }
+
 # Format company data
 def format_company_data(company: dict, cvr_number: str) -> dict:
     """Convert raw company data to the API response schema."""
@@ -428,19 +509,19 @@ def format_company_data(company: dict, cvr_number: str) -> dict:
 
     company_data = {
         "vat": cvr_number,
-        "name": get_company_name(company),
-        "address": get_combined_address(company),
-        "zipcode": get_address_field(company, 'postnummer'),
-        "city": get_address_field(company, 'postdistrikt'),
-        "cityname": get_address_field(company, 'bynavn'),
+        "name": get_name(metadata),
+        "address": get_combined_address(metadata),
+        "zipcode": get_address_field(metadata, 'postnummer'),
+        "city": get_address_field(metadata, 'postdistrikt'),
+        "cityname": get_address_field(metadata, 'bynavn'),
         "protected": company.get('reklamebeskyttet'),
-        "phone": get_phone_number(company),
-        "email": get_email(company),
+        "phone": get_phone_number(metadata),
+        "email": get_email(metadata),
         "fax": company.get('telefaxNummer'),
         "startdate": get_formatted_date(metadata.get('stiftelsesDato')),
         "enddate": get_formatted_date(first_period.get('gyldigTil')),
-        "employees": get_employees(company),
-        "addressco": get_address_field(company, 'conavn'),
+        "employees": get_employees(metadata),
+        "addressco": get_address_field(metadata, 'conavn'),
         "industrycode": hovedbranche.get('branchekode'),
         "industrydesc": hovedbranche.get('branchetekst'),
         "companycode": virksomhedsform.get('virksomhedsformkode'),
@@ -448,20 +529,18 @@ def format_company_data(company: dict, cvr_number: str) -> dict:
         "bankrupt": is_bankrupt(company),
         "status": metadata.get('sammensatStatus'),
         "companytypeshort": virksomhedsform.get('kortBeskrivelse'),
-        "website": get_website(company),
+        "website": get_website(metadata),
         "version": 1
     }
     return company_data
 
-# Get company name
-def get_company_name(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get company/unit name from a metadata dict
+def get_name(metadata: dict):
     navn = metadata.get('nyesteNavn') or {}
     return navn.get('navn')
 
-# Get combined address
-def get_combined_address(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get combined address from a metadata dict
+def get_combined_address(metadata: dict):
     address = metadata.get('nyesteBeliggenhedsadresse') or {}
 
     vejnavn = address.get('vejnavn', '')
@@ -483,54 +562,49 @@ def get_combined_address(company):
     return combined_address
 
 
-# Get specific field from address
-def get_address_field(company, field):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get specific field from the address inside a metadata dict
+def get_address_field(metadata: dict, field):
     address = metadata.get('nyesteBeliggenhedsadresse') or {}
     return address.get(field)
 
-# Get formatted date
+# Get formatted date (unchanged)
 def get_formatted_date(date):
     if date is None:
         return None
-    parts = date.split('-')
-    return f"{parts[2]}/{parts[1]} - {parts[0]}"
+    return date
 
-# Get phone number
-def get_phone_number(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get phone number from metadata
+def get_phone_number(metadata: dict):
     contact_info = metadata.get('nyesteKontaktoplysninger')
     if not contact_info:
         return None
     phone = re.findall(r'\b\d{8}\b', str(contact_info))
     return phone[0] if phone else None
 
-# Get email
-def get_email(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get email from metadata
+def get_email(metadata: dict):
     contact_info = metadata.get('nyesteKontaktoplysninger')
     if not contact_info:
         return None
     email = re.findall(r'\b[\w.-]+@[\w.-]+\b', str(contact_info))
     return email[0] if email else None
 
-# Get website
-def get_website(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get website from metadata
+def get_website(metadata: dict):
     contact_info = metadata.get('nyesteKontaktoplysninger')
     if not contact_info:
         return None
     website = re.findall(r'\bhttp[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\b', str(contact_info))
     return website[0] if website else None
 
-# Get number of employees
-def get_employees(company):
-    metadata = company.get('virksomhedMetadata', {})
+# Get number of employees from metadata
+def get_employees(metadata: dict):
     erst_maaned_beskaeftigelse = metadata.get('nyesteErstMaanedsbeskaeftigelse')
     if erst_maaned_beskaeftigelse:
         return erst_maaned_beskaeftigelse.get('antalAnsatte')
     return None
-# Check if the company is bankrupt
+
+# Check if the company is bankrupt (unchanged — company-only)
 def is_bankrupt(company):
     metadata = company.get('virksomhedMetadata')
     if metadata:
