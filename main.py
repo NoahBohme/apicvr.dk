@@ -71,8 +71,8 @@ async def company_frontned(request: Request, cvrNumber: str):
 
 
 @app.get("/api/v1/{cvrNumber}")
-def read_root(cvrNumber: int):
-    return search_cvr_api(cvrNumber)
+def read_root(cvrNumber: int, include_p_units: bool = True):
+    return search_cvr_api(cvrNumber, include_p_units=include_p_units)
 
 @app.get("/api/v1/search/company/{companyName}")
 def search_company(companyName: str):

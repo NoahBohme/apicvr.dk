@@ -16,7 +16,7 @@ url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
 url_p = "http://distribution.virk.dk/cvr-permanent/produktionsenhed/_search"
 
 # Make a POST request to system-til-system-adgang
-def search_cvr_api(cvr_number: int) -> dict:
+def search_cvr_api(cvr_number: int, include_p_units: bool = True) -> dict:
     """Look up company information based on CVR number."""
     payload = json.dumps({
         "_source": ["Vrvirksomhed"],
@@ -54,13 +54,14 @@ def search_cvr_api(cvr_number: int) -> dict:
         company = json_response['hits']['hits'][0]['_source']['Vrvirksomhed']
         company_data = format_company_data(company, cvr_number)
 
-        penheder = company.get('penheder') or []
-        p_numbers = [
-            p['pNummer']
-            for p in penheder
-            if isinstance(p, dict) and p.get('pNummer')
-        ]
-        company_data['p_units'] = fetch_p_units(p_numbers)
+        if include_p_units:
+            penheder = company.get('penheder') or []
+            p_numbers = [
+                p['pNummer']
+                for p in penheder
+                if isinstance(p, dict) and p.get('pNummer')
+            ]
+            company_data['p_units'] = fetch_p_units(p_numbers)
 
         return company_data
 
