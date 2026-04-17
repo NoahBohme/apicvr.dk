@@ -70,10 +70,10 @@ def fetch_p_units(p_numbers: list) -> list:
         return []
 
     payload = json.dumps({
-        "_source": ["Vrproduktionsenhed"],
+        "_source": ["VrproduktionsEnhed"],
         "query": {
             "terms": {
-                "Vrproduktionsenhed.pNummer": p_numbers
+                "VrproduktionsEnhed.pNummer": p_numbers
             }
         },
         "size": 1000
@@ -99,7 +99,7 @@ def fetch_p_units(p_numbers: list) -> list:
     hits = json_response.get('hits', {}).get('hits', [])
     p_units = []
     for hit in hits:
-        p_unit = hit.get('_source', {}).get('Vrproduktionsenhed')
+        p_unit = hit.get('_source', {}).get('VrproduktionsEnhed')
         if p_unit:
             p_units.append(format_p_unit_data(p_unit))
     return p_units
