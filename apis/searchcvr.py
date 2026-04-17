@@ -13,6 +13,7 @@ APITOKEN = os.getenv("API_TOKEN", "")
 
 # API endpoint
 url = "http://distribution.virk.dk/cvr-permanent/virksomhed/_search"
+url_p = "http://distribution.virk.dk/cvr-permanent/produktionsenhed/_search"
 
 # Make a POST request to system-til-system-adgang
 def search_cvr_api(cvr_number: int) -> dict:
@@ -52,6 +53,46 @@ def search_cvr_api(cvr_number: int) -> dict:
     else:
         company = json_response['hits']['hits'][0]['_source']['Vrvirksomhed']
         return format_company_data(company, cvr_number)
+
+def fetch_p_units(p_numbers: list) -> list:
+    """Fetch full production-unit detail for each P-number. Returns [] on any error."""
+    if not p_numbers:
+        return []
+
+    payload = json.dumps({
+        "_source": ["Vrproduktionsenhed"],
+        "query": {
+            "terms": {
+                "Vrproduktionsenhed.pNummer": p_numbers
+            }
+        },
+        "size": 1000
+    })
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.post(url_p, headers=headers, data=payload, timeout=10)
+    except requests.RequestException:
+        return []
+
+    if response.status_code != 200:
+        return []
+
+    try:
+        json_response = response.json()
+    except ValueError:
+        return []
+
+    hits = json_response.get('hits', {}).get('hits', [])
+    p_units = []
+    for hit in hits:
+        p_unit = hit.get('_source', {}).get('Vrproduktionsenhed')
+        if p_unit:
+            p_units.append(format_p_unit_data(p_unit))
+    return p_units
 
 def search_cvr_by_name(company_name: str) -> list:
     """Search for companies matching the provided name."""
