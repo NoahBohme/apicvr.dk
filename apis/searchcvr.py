@@ -52,7 +52,17 @@ def search_cvr_api(cvr_number: int) -> dict:
         return {"error": "NOT_FOUND"}
     else:
         company = json_response['hits']['hits'][0]['_source']['Vrvirksomhed']
-        return format_company_data(company, cvr_number)
+        company_data = format_company_data(company, cvr_number)
+
+        penheder = company.get('penheder') or []
+        p_numbers = [
+            p['pNummer']
+            for p in penheder
+            if isinstance(p, dict) and p.get('pNummer')
+        ]
+        company_data['p_units'] = fetch_p_units(p_numbers)
+
+        return company_data
 
 def fetch_p_units(p_numbers: list) -> list:
     """Fetch full production-unit detail for each P-number. Returns [] on any error."""
