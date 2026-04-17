@@ -428,19 +428,19 @@ def format_company_data(company: dict, cvr_number: str) -> dict:
 
     company_data = {
         "vat": cvr_number,
-        "name": get_company_name(company),
-        "address": get_combined_address(company),
-        "zipcode": get_address_field(company, 'postnummer'),
-        "city": get_address_field(company, 'postdistrikt'),
-        "cityname": get_address_field(company, 'bynavn'),
+        "name": get_name(metadata),
+        "address": get_combined_address(metadata),
+        "zipcode": get_address_field(metadata, 'postnummer'),
+        "city": get_address_field(metadata, 'postdistrikt'),
+        "cityname": get_address_field(metadata, 'bynavn'),
         "protected": company.get('reklamebeskyttet'),
-        "phone": get_phone_number(company),
-        "email": get_email(company),
+        "phone": get_phone_number(metadata),
+        "email": get_email(metadata),
         "fax": company.get('telefaxNummer'),
         "startdate": get_formatted_date(metadata.get('stiftelsesDato')),
         "enddate": get_formatted_date(first_period.get('gyldigTil')),
-        "employees": get_employees(company),
-        "addressco": get_address_field(company, 'conavn'),
+        "employees": get_employees(metadata),
+        "addressco": get_address_field(metadata, 'conavn'),
         "industrycode": hovedbranche.get('branchekode'),
         "industrydesc": hovedbranche.get('branchetekst'),
         "companycode": virksomhedsform.get('virksomhedsformkode'),
@@ -448,20 +448,18 @@ def format_company_data(company: dict, cvr_number: str) -> dict:
         "bankrupt": is_bankrupt(company),
         "status": metadata.get('sammensatStatus'),
         "companytypeshort": virksomhedsform.get('kortBeskrivelse'),
-        "website": get_website(company),
+        "website": get_website(metadata),
         "version": 1
     }
     return company_data
 
-# Get company name
-def get_company_name(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get company/unit name from a metadata dict
+def get_name(metadata: dict):
     navn = metadata.get('nyesteNavn') or {}
     return navn.get('navn')
 
-# Get combined address
-def get_combined_address(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get combined address from a metadata dict
+def get_combined_address(metadata: dict):
     address = metadata.get('nyesteBeliggenhedsadresse') or {}
 
     vejnavn = address.get('vejnavn', '')
@@ -483,54 +481,50 @@ def get_combined_address(company):
     return combined_address
 
 
-# Get specific field from address
-def get_address_field(company, field):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get specific field from the address inside a metadata dict
+def get_address_field(metadata: dict, field):
     address = metadata.get('nyesteBeliggenhedsadresse') or {}
     return address.get(field)
 
-# Get formatted date
+# Get formatted date (unchanged)
 def get_formatted_date(date):
     if date is None:
         return None
     parts = date.split('-')
     return f"{parts[2]}/{parts[1]} - {parts[0]}"
 
-# Get phone number
-def get_phone_number(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get phone number from metadata
+def get_phone_number(metadata: dict):
     contact_info = metadata.get('nyesteKontaktoplysninger')
     if not contact_info:
         return None
     phone = re.findall(r'\b\d{8}\b', str(contact_info))
     return phone[0] if phone else None
 
-# Get email
-def get_email(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get email from metadata
+def get_email(metadata: dict):
     contact_info = metadata.get('nyesteKontaktoplysninger')
     if not contact_info:
         return None
     email = re.findall(r'\b[\w.-]+@[\w.-]+\b', str(contact_info))
     return email[0] if email else None
 
-# Get website
-def get_website(company):
-    metadata = company.get('virksomhedMetadata') or {}
+# Get website from metadata
+def get_website(metadata: dict):
     contact_info = metadata.get('nyesteKontaktoplysninger')
     if not contact_info:
         return None
     website = re.findall(r'\bhttp[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\b', str(contact_info))
     return website[0] if website else None
 
-# Get number of employees
-def get_employees(company):
-    metadata = company.get('virksomhedMetadata', {})
+# Get number of employees from metadata
+def get_employees(metadata: dict):
     erst_maaned_beskaeftigelse = metadata.get('nyesteErstMaanedsbeskaeftigelse')
     if erst_maaned_beskaeftigelse:
         return erst_maaned_beskaeftigelse.get('antalAnsatte')
     return None
-# Check if the company is bankrupt
+
+# Check if the company is bankrupt (unchanged — company-only)
 def is_bankrupt(company):
     metadata = company.get('virksomhedMetadata')
     if metadata:
