@@ -487,7 +487,7 @@ def format_p_unit_data(p_unit: dict) -> dict:
         "email": get_email(metadata),
         "website": get_website(metadata),
         "fax": p_unit.get('telefaxNummer'),
-        "startdate": get_formatted_date(metadata.get('stiftelsesDato')),
+        "startdate": get_formatted_date(first_period.get('gyldigFra')),
         "enddate": get_formatted_date(first_period.get('gyldigTil')),
         "industrycode": hovedbranche.get('branchekode'),
         "industrydesc": hovedbranche.get('branchetekst'),
@@ -571,8 +571,7 @@ def get_address_field(metadata: dict, field):
 def get_formatted_date(date):
     if date is None:
         return None
-    parts = date.split('-')
-    return f"{parts[2]}/{parts[1]} - {parts[0]}"
+    return date
 
 # Get phone number from metadata
 def get_phone_number(metadata: dict):
