@@ -455,6 +455,36 @@ def _parse_address_components(address: str) -> dict:
     return components
 
 
+def format_p_unit_data(p_unit: dict) -> dict:
+    """Convert raw production-unit data to the API response schema."""
+    metadata = p_unit.get('produktionsEnhedMetadata') or {}
+    hovedbranche = metadata.get('nyesteHovedbranche') or {}
+
+    livsforloeb = p_unit.get('livsforloeb') or []
+    first_period = {}
+    if livsforloeb and isinstance(livsforloeb[0], dict):
+        first_period = livsforloeb[0].get('periode') or {}
+
+    return {
+        "p_number": p_unit.get('pNummer'),
+        "name": get_name(metadata),
+        "address": get_combined_address(metadata),
+        "zipcode": get_address_field(metadata, 'postnummer'),
+        "city": get_address_field(metadata, 'postdistrikt'),
+        "cityname": get_address_field(metadata, 'bynavn'),
+        "addressco": get_address_field(metadata, 'conavn'),
+        "phone": get_phone_number(metadata),
+        "email": get_email(metadata),
+        "website": get_website(metadata),
+        "fax": p_unit.get('telefaxNummer'),
+        "startdate": get_formatted_date(metadata.get('stiftelsesDato')),
+        "enddate": get_formatted_date(first_period.get('gyldigTil')),
+        "industrycode": hovedbranche.get('branchekode'),
+        "industrydesc": hovedbranche.get('branchetekst'),
+        "employees": get_employees(metadata),
+        "protected": p_unit.get('reklamebeskyttet'),
+    }
+
 # Format company data
 def format_company_data(company: dict, cvr_number: str) -> dict:
     """Convert raw company data to the API response schema."""
