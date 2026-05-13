@@ -15,12 +15,20 @@ def init_db():
                 method TEXT NOT NULL,
                 path TEXT NOT NULL,
                 status_code INTEGER,
-                response_time_ms REAL
+                response_time_ms REAL,
+                ip TEXT,
+                referer TEXT
             )
         """)
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_timestamp ON request_log(timestamp)"
         )
+        # Migrate existing DBs that lack the new columns
+        for col, coltype in [("ip", "TEXT"), ("referer", "TEXT")]:
+            try:
+                conn.execute(f"ALTER TABLE request_log ADD COLUMN {col} {coltype}")
+            except sqlite3.OperationalError:
+                pass
 
 
 @contextmanager
@@ -34,12 +42,12 @@ def _get_conn():
         conn.close()
 
 
-def log_request(method: str, path: str, status_code: int, response_time_ms: float):
+def log_request(method: str, path: str, status_code: int, response_time_ms: float, ip: str = None, referer: str = None):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     with _get_conn() as conn:
         conn.execute(
-            "INSERT INTO request_log (timestamp, method, path, status_code, response_time_ms) VALUES (?, ?, ?, ?, ?)",
-            (ts, method, path, status_code, round(response_time_ms, 2)),
+            "INSERT INTO request_log (timestamp, method, path, status_code, response_time_ms, ip, referer) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (ts, method, path, status_code, round(response_time_ms, 2), ip, referer or None),
         )
 
 
@@ -124,6 +132,60 @@ def get_stats() -> dict:
             (this_month,),
         ).fetchall()
 
+        top_ips_today = conn.execute(
+            """
+            SELECT ip, COUNT(*) as count FROM request_log
+            WHERE date(timestamp) = ? AND ip IS NOT NULL
+            GROUP BY ip ORDER BY count DESC LIMIT 15
+            """,
+            (today,),
+        ).fetchall()
+
+        top_ips_week = conn.execute(
+            """
+            SELECT ip, COUNT(*) as count FROM request_log
+            WHERE date(timestamp) >= ? AND ip IS NOT NULL
+            GROUP BY ip ORDER BY count DESC LIMIT 15
+            """,
+            (week_start,),
+        ).fetchall()
+
+        top_ips_month = conn.execute(
+            """
+            SELECT ip, COUNT(*) as count FROM request_log
+            WHERE strftime('%Y-%m', timestamp) = ? AND ip IS NOT NULL
+            GROUP BY ip ORDER BY count DESC LIMIT 15
+            """,
+            (this_month,),
+        ).fetchall()
+
+        top_referers_today = conn.execute(
+            """
+            SELECT referer, COUNT(*) as count FROM request_log
+            WHERE date(timestamp) = ? AND referer IS NOT NULL
+            GROUP BY referer ORDER BY count DESC LIMIT 15
+            """,
+            (today,),
+        ).fetchall()
+
+        top_referers_week = conn.execute(
+            """
+            SELECT referer, COUNT(*) as count FROM request_log
+            WHERE date(timestamp) >= ? AND referer IS NOT NULL
+            GROUP BY referer ORDER BY count DESC LIMIT 15
+            """,
+            (week_start,),
+        ).fetchall()
+
+        top_referers_month = conn.execute(
+            """
+            SELECT referer, COUNT(*) as count FROM request_log
+            WHERE strftime('%Y-%m', timestamp) = ? AND referer IS NOT NULL
+            GROUP BY referer ORDER BY count DESC LIMIT 15
+            """,
+            (this_month,),
+        ).fetchall()
+
         return {
             "today": today_count,
             "week": week_count,
@@ -152,4 +214,10 @@ def get_stats() -> dict:
             "daily_month": [
                 {"day": r["day"], "count": r["count"]} for r in daily_month
             ],
+            "top_ips_today": [{"ip": r["ip"], "count": r["count"]} for r in top_ips_today],
+            "top_ips_week": [{"ip": r["ip"], "count": r["count"]} for r in top_ips_week],
+            "top_ips_month": [{"ip": r["ip"], "count": r["count"]} for r in top_ips_month],
+            "top_referers_today": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_today],
+            "top_referers_week": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_week],
+            "top_referers_month": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_month],
         }

@@ -417,16 +417,135 @@
             </div>
         </div>
 
+        <!-- Top IPs + Top Referers -->
+        <div class="charts" style="grid-template-columns: 1fr 1fr; margin-top: 24px;">
+
+            <!-- Top IPs -->
+            <div class="endpoints-section" style="margin-bottom: 0;">
+                <div class="endpoints-header">
+                    <h3>Top IPs</h3>
+                    <div class="tab-btns">
+                        <button class="tab-btn active" onclick="showTabGroup('ip', 'today', this)">Today</button>
+                        <button class="tab-btn" onclick="showTabGroup('ip', 'week', this)">This week</button>
+                        <button class="tab-btn" onclick="showTabGroup('ip', 'month', this)">This month</button>
+                    </div>
+                </div>
+                <div class="tab-panel active" id="ip-tab-today">
+                    {% if stats.top_ips_today %}
+                    {% set max_v = stats.top_ips_today[0].count %}
+                    <table><thead><tr><th>IP</th><th>Requests</th></tr></thead><tbody>
+                    {% for r in stats.top_ips_today %}
+                    <tr>
+                        <td><span class="path">{{ r.ip }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2c3e50;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody></table>
+                    {% else %}<p class="empty">No data today.</p>{% endif %}
+                </div>
+                <div class="tab-panel" id="ip-tab-week">
+                    {% if stats.top_ips_week %}
+                    {% set max_v = stats.top_ips_week[0].count %}
+                    <table><thead><tr><th>IP</th><th>Requests</th></tr></thead><tbody>
+                    {% for r in stats.top_ips_week %}
+                    <tr>
+                        <td><span class="path">{{ r.ip }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2c3e50;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody></table>
+                    {% else %}<p class="empty">No data this week.</p>{% endif %}
+                </div>
+                <div class="tab-panel" id="ip-tab-month">
+                    {% if stats.top_ips_month %}
+                    {% set max_v = stats.top_ips_month[0].count %}
+                    <table><thead><tr><th>IP</th><th>Requests</th></tr></thead><tbody>
+                    {% for r in stats.top_ips_month %}
+                    <tr>
+                        <td><span class="path">{{ r.ip }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2c3e50;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody></table>
+                    {% else %}<p class="empty">No data this month.</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Top Referers -->
+            <div class="endpoints-section" style="margin-bottom: 0;">
+                <div class="endpoints-header">
+                    <h3>Top Referers</h3>
+                    <div class="tab-btns">
+                        <button class="tab-btn active" onclick="showTabGroup('ref', 'today', this)">Today</button>
+                        <button class="tab-btn" onclick="showTabGroup('ref', 'week', this)">This week</button>
+                        <button class="tab-btn" onclick="showTabGroup('ref', 'month', this)">This month</button>
+                    </div>
+                </div>
+                <div class="tab-panel active" id="ref-tab-today">
+                    {% if stats.top_referers_today %}
+                    {% set max_v = stats.top_referers_today[0].count %}
+                    <table><thead><tr><th>Referer</th><th>Requests</th></tr></thead><tbody>
+                    {% for r in stats.top_referers_today %}
+                    <tr>
+                        <td><span class="path" style="word-break: break-all;">{{ r.referer }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #546e7a;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody></table>
+                    {% else %}<p class="empty">No referers today.</p>{% endif %}
+                </div>
+                <div class="tab-panel" id="ref-tab-week">
+                    {% if stats.top_referers_week %}
+                    {% set max_v = stats.top_referers_week[0].count %}
+                    <table><thead><tr><th>Referer</th><th>Requests</th></tr></thead><tbody>
+                    {% for r in stats.top_referers_week %}
+                    <tr>
+                        <td><span class="path" style="word-break: break-all;">{{ r.referer }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #546e7a;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody></table>
+                    {% else %}<p class="empty">No referers this week.</p>{% endif %}
+                </div>
+                <div class="tab-panel" id="ref-tab-month">
+                    {% if stats.top_referers_month %}
+                    {% set max_v = stats.top_referers_month[0].count %}
+                    <table><thead><tr><th>Referer</th><th>Requests</th></tr></thead><tbody>
+                    {% for r in stats.top_referers_month %}
+                    <tr>
+                        <td><span class="path" style="word-break: break-all;">{{ r.referer }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #546e7a;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody></table>
+                    {% else %}<p class="empty">No referers this month.</p>{% endif %}
+                </div>
+            </div>
+
+        </div>
+
         <footer>Auto-refreshes on page reload &mdash; data stored in SQLite</footer>
     </div>
 
     <script>
-        // Tab switching
+        // Tab switching (endpoints)
         function showTab(name) {
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#tab-today, #tab-week, #tab-month').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => { if (['Today','This week','This month'].includes(b.textContent) && b.closest('.endpoints-section:not([id])')) b.classList.remove('active'); });
             document.getElementById('tab-' + name).classList.add('active');
             event.target.classList.add('active');
+        }
+
+        // Tab switching (ip/ref groups)
+        function showTabGroup(group, period, btn) {
+            const prefix = group + '-tab-';
+            ['today','week','month'].forEach(p => {
+                const el = document.getElementById(prefix + p);
+                if (el) el.classList.remove('active');
+            });
+            btn.closest('.endpoints-section').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(prefix + period).classList.add('active');
+            btn.classList.add('active');
         }
 
         const chartDefaults = {

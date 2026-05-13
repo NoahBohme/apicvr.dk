@@ -38,7 +38,10 @@ class _RequestLogMiddleware(BaseHTTPMiddleware):
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000
-        log_request(request.method, request.url.path, response.status_code, elapsed_ms)
+        forwarded_for = request.headers.get("x-forwarded-for")
+        ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.client.host if request.client else None)
+        referer = request.headers.get("referer") or request.headers.get("referrer") or None
+        log_request(request.method, request.url.path, response.status_code, elapsed_ms, ip=ip, referer=referer)
         return response
 
 
