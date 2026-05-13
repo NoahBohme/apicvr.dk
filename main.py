@@ -1,11 +1,46 @@
+import os
+import secrets
+import time
 from apis.searchcvr import *
 from typing import Union
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import NoMatchFound
 from app.modules.kapitalsog import show_capital_result
+from app.modules.stats import init_db, log_request, get_stats
+
+init_db()
+
+_security = HTTPBasic()
+
+def _verify_stats_auth(credentials: HTTPBasicCredentials = Depends(_security)):
+    stats_password = os.getenv("STATS_PASSWORD", "")
+    if not stats_password:
+        raise HTTPException(status_code=503, detail="STATS_PASSWORD not configured")
+    ok = secrets.compare_digest(
+        credentials.password.encode("utf-8"),
+        stats_password.encode("utf-8"),
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+
+class _RequestLogMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        log_request(request.method, request.url.path, response.status_code, elapsed_ms)
+        return response
+
 
 app = FastAPI(
     title="APICVR.dk",
@@ -23,6 +58,8 @@ app = FastAPI(
 )
 
 templates = Jinja2Templates(directory="frontend/templates")
+
+app.add_middleware(_RequestLogMiddleware)
 
 # Add CORS middleware
 app.add_middleware(
@@ -111,3 +148,8 @@ async def search_da(request: Request):
 @app.get("/da/kapitalindsigt/{cvrNumber}")
 async def company_frontned(request: Request, cvrNumber: str):
     return templates.TemplateResponse("/kapitalresultat.html", {"request": request, "data": show_capital_result(cvrNumber)})
+
+
+@app.get("/stats")
+async def stats_dashboard(request: Request, _: bool = Depends(_verify_stats_auth)):
+    return templates.TemplateResponse("/stats.html", {"request": request, "stats": get_stats()})

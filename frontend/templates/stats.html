@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>API Stats — APICVR.dk</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #2c3e50;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            background: white;
+            border-top: 4px solid #2c3e50;
+            padding: 32px 40px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: baseline;
+            gap: 20px;
+        }
+
+        header h1 {
+            font-size: 2em;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+        }
+
+        header .subtitle {
+            color: #78909c;
+            font-size: 0.9em;
+        }
+
+        /* Stat cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: #e0e0e0;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: white;
+            padding: 32px 28px;
+        }
+
+        .card .label {
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #78909c;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .card .value {
+            font-size: 2.8em;
+            font-weight: 300;
+            color: #2c3e50;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        .card .sublabel {
+            font-size: 0.8em;
+            color: #b0bec5;
+            margin-top: 8px;
+        }
+
+        .card.accent {
+            border-left: 3px solid #2c3e50;
+        }
+
+        /* Charts row */
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-box {
+            background: white;
+            padding: 28px 28px 20px;
+        }
+
+        .chart-box h3 {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #78909c;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        .chart-box canvas { width: 100% !important; }
+
+        /* Endpoints table */
+        .endpoints-section {
+            background: white;
+            padding: 28px;
+            margin-bottom: 32px;
+        }
+
+        .endpoints-header {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 20px;
+        }
+
+        .endpoints-header h3 {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #78909c;
+            font-weight: 500;
+            margin-right: 24px;
+        }
+
+        .tab-btns {
+            display: flex;
+            gap: 0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 6px 18px;
+            font-size: 0.82em;
+            background: white;
+            border: none;
+            cursor: pointer;
+            color: #78909c;
+            font-family: inherit;
+            border-right: 1px solid #e0e0e0;
+            transition: background 0.15s;
+        }
+
+        .tab-btn:last-child { border-right: none; }
+
+        .tab-btn.active {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .tab-btn:hover:not(.active) { background: #f8f9fa; }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        thead th {
+            text-align: left;
+            padding: 8px 12px;
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #b0bec5;
+            font-weight: 500;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        thead th:last-child { text-align: right; }
+
+        tbody tr { border-bottom: 1px solid #f8f9fa; }
+        tbody tr:last-child { border-bottom: none; }
+
+        tbody td {
+            padding: 10px 12px;
+            color: #2c3e50;
+        }
+
+        tbody td:last-child { text-align: right; }
+
+        .path {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.88em;
+            color: #37474f;
+        }
+
+        .bar-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .bar {
+            height: 6px;
+            background: #cfd8dc;
+            border-radius: 3px;
+            min-width: 4px;
+            flex-shrink: 0;
+        }
+
+        .count-num {
+            font-weight: 500;
+            min-width: 32px;
+            text-align: right;
+            color: #546e7a;
+        }
+
+        .empty {
+            color: #b0bec5;
+            font-size: 0.9em;
+            padding: 20px 12px;
+        }
+
+        /* Response time card */
+        .meta-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .meta-box {
+            background: white;
+            padding: 24px 28px;
+        }
+
+        .meta-box .label {
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #78909c;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .meta-box .value {
+            font-size: 2em;
+            font-weight: 300;
+            color: #2c3e50;
+        }
+
+        .meta-box .unit {
+            font-size: 0.5em;
+            color: #b0bec5;
+            margin-left: 4px;
+        }
+
+        footer {
+            text-align: center;
+            color: #b0bec5;
+            font-size: 0.82em;
+            padding: 20px 0;
+        }
+
+        @media (max-width: 900px) {
+            .cards { grid-template-columns: 1fr 1fr; }
+            .charts { grid-template-columns: 1fr; }
+            .meta-row { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 560px) {
+            .cards { grid-template-columns: 1fr; }
+            header { padding: 24px 20px; flex-direction: column; gap: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>API Stats</h1>
+            <span class="subtitle">APICVR.dk &mdash; live request dashboard</span>
+        </header>
+
+        <!-- Summary cards -->
+        <div class="cards">
+            <div class="card accent">
+                <div class="label">Today</div>
+                <div class="value">{{ stats.today | int }}</div>
+                <div class="sublabel">{{ stats.today_label }}</div>
+            </div>
+            <div class="card">
+                <div class="label">This week</div>
+                <div class="value">{{ stats.week | int }}</div>
+                <div class="sublabel">{{ stats.week_label }}</div>
+            </div>
+            <div class="card">
+                <div class="label">This month</div>
+                <div class="value">{{ stats.this_month | int }}</div>
+                <div class="sublabel">{{ stats.this_month_label }}</div>
+            </div>
+            <div class="card">
+                <div class="label">Last month</div>
+                <div class="value">{{ stats.last_month | int }}</div>
+                <div class="sublabel">{{ stats.last_month_label }}</div>
+            </div>
+        </div>
+
+        <!-- Avg response + daily month chart -->
+        <div class="meta-row">
+            <div class="meta-box">
+                <div class="label">Avg response time today</div>
+                <div class="value">{{ stats.avg_response_ms }}<span class="unit">ms</span></div>
+            </div>
+            <div class="meta-box" style="padding-bottom: 16px;">
+                <div class="label">Requests per day — this month</div>
+                <canvas id="monthChart" height="60"></canvas>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts">
+            <div class="chart-box">
+                <h3>Requests per hour — today</h3>
+                <canvas id="hourlyChart" height="160"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>Requests per day — this week</h3>
+                <canvas id="weekChart" height="160"></canvas>
+            </div>
+        </div>
+
+        <!-- Top endpoints -->
+        <div class="endpoints-section">
+            <div class="endpoints-header">
+                <h3>Top endpoints</h3>
+                <div class="tab-btns">
+                    <button class="tab-btn active" onclick="showTab('today')">Today</button>
+                    <button class="tab-btn" onclick="showTab('week')">This week</button>
+                    <button class="tab-btn" onclick="showTab('month')">This month</button>
+                </div>
+            </div>
+
+            <!-- Today -->
+            <div class="tab-panel active" id="tab-today">
+                {% if stats.top_endpoints_today %}
+                {% set max_today = stats.top_endpoints_today[0].count %}
+                <table>
+                    <thead><tr><th>Endpoint</th><th>Requests</th></tr></thead>
+                    <tbody>
+                    {% for ep in stats.top_endpoints_today %}
+                    <tr>
+                        <td><span class="path">{{ ep.path }}</span></td>
+                        <td>
+                            <div class="bar-cell">
+                                <div class="bar" style="width: {{ [((ep.count / max_today) * 120) | int, 4] | max }}px; background: #2c3e50;"></div>
+                                <span class="count-num">{{ ep.count }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">No requests today yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Week -->
+            <div class="tab-panel" id="tab-week">
+                {% if stats.top_endpoints_week %}
+                {% set max_week = stats.top_endpoints_week[0].count %}
+                <table>
+                    <thead><tr><th>Endpoint</th><th>Requests</th></tr></thead>
+                    <tbody>
+                    {% for ep in stats.top_endpoints_week %}
+                    <tr>
+                        <td><span class="path">{{ ep.path }}</span></td>
+                        <td>
+                            <div class="bar-cell">
+                                <div class="bar" style="width: {{ [((ep.count / max_week) * 120) | int, 4] | max }}px; background: #2c3e50;"></div>
+                                <span class="count-num">{{ ep.count }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">No requests this week yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Month -->
+            <div class="tab-panel" id="tab-month">
+                {% if stats.top_endpoints_month %}
+                {% set max_month = stats.top_endpoints_month[0].count %}
+                <table>
+                    <thead><tr><th>Endpoint</th><th>Requests</th></tr></thead>
+                    <tbody>
+                    {% for ep in stats.top_endpoints_month %}
+                    <tr>
+                        <td><span class="path">{{ ep.path }}</span></td>
+                        <td>
+                            <div class="bar-cell">
+                                <div class="bar" style="width: {{ [((ep.count / max_month) * 120) | int, 4] | max }}px; background: #2c3e50;"></div>
+                                <span class="count-num">{{ ep.count }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="empty">No requests this month yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <footer>Auto-refreshes on page reload &mdash; data stored in SQLite</footer>
+    </div>
+
+    <script>
+        // Tab switching
+        function showTab(name) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        const chartDefaults = {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#b0bec5', font: { size: 11 } }
+                },
+                y: {
+                    grid: { color: '#f0f0f0' },
+                    ticks: { color: '#b0bec5', font: { size: 11 }, precision: 0 },
+                    beginAtZero: true
+                }
+            }
+        };
+
+        // Hourly chart — fill all 24 hours
+        const hourlyRaw = {{ stats.hourly_today | tojson }};
+        const hourlyMap = Object.fromEntries(hourlyRaw.map(h => [h.hour, h.count]));
+        const hourlyLabels = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0'));
+        const hourlyData = hourlyLabels.map(h => hourlyMap[h] || 0);
+
+        new Chart(document.getElementById('hourlyChart'), {
+            type: 'bar',
+            data: {
+                labels: hourlyLabels,
+                datasets: [{
+                    data: hourlyData,
+                    backgroundColor: '#2c3e50',
+                    borderRadius: 2,
+                }]
+            },
+            options: chartDefaults
+        });
+
+        // Week chart
+        const weekRaw = {{ stats.daily_week | tojson }};
+        new Chart(document.getElementById('weekChart'), {
+            type: 'bar',
+            data: {
+                labels: weekRaw.map(d => d.day),
+                datasets: [{
+                    data: weekRaw.map(d => d.count),
+                    backgroundColor: '#546e7a',
+                    borderRadius: 2,
+                }]
+            },
+            options: chartDefaults
+        });
+
+        // Month sparkline
+        const monthRaw = {{ stats.daily_month | tojson }};
+        new Chart(document.getElementById('monthChart'), {
+            type: 'line',
+            data: {
+                labels: monthRaw.map(d => d.day.slice(8)),
+                datasets: [{
+                    data: monthRaw.map(d => d.count),
+                    borderColor: '#2c3e50',
+                    backgroundColor: 'rgba(44,62,80,0.06)',
+                    borderWidth: 1.5,
+                    pointRadius: 2,
+                    fill: true,
+                    tension: 0.3,
+                }]
+            },
+            options: {
+                ...chartDefaults,
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#b0bec5', font: { size: 10 }, maxTicksLimit: 10 } },
+                    y: { grid: { color: '#f0f0f0' }, ticks: { color: '#b0bec5', font: { size: 10 }, precision: 0 }, beginAtZero: true }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
