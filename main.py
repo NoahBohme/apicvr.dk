@@ -3,7 +3,7 @@ import secrets
 import time
 from apis.searchcvr import *
 from typing import Union
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request, Depends, HTTPException, status
@@ -74,26 +74,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def home(request: Request):
+def _base_context(request: Request) -> dict:
     base_url = str(request.base_url).rstrip("/")
     try:
         docs_url = request.url_for("swagger_ui_html")
     except NoMatchFound:
         docs_url = f"{base_url}/docs"
+    return {"request": request, "base_url": base_url, "docs_url": docs_url}
 
-    return templates.TemplateResponse(
-        "/homepage.html",
-        {
-            "request": request,
-            "base_url": base_url,
-            "docs_url": docs_url,
-        },
-    )
+
+@app.get("/")
+async def home(request: Request):
+    return templates.TemplateResponse("/homepage.html", _base_context(request))
+
+
+@app.get("/en/")
+async def home_en(request: Request):
+    return templates.TemplateResponse("/homepage_en.html", _base_context(request))
+
+
+@app.get("/da/mcp")
+async def mcp_da(request: Request):
+    return templates.TemplateResponse("/mcp_da.html", _base_context(request))
+
+
+@app.get("/en/mcp")
+async def mcp_en(request: Request):
+    return templates.TemplateResponse("/mcp_en.html", _base_context(request))
+
+
+@app.get("/mcp")
+async def mcp_redirect():
+    return RedirectResponse("/da/mcp", status_code=301)
 
 @app.get("/da/search/")
 async def search_da(request: Request):
     return templates.TemplateResponse("/sogning.html", {"request": request})
+
+
+@app.get("/en/company/{cvrNumber}")
+async def company_en(request: Request, cvrNumber: str):
+    try:
+        cvr_int = int(cvrNumber)
+    except ValueError:
+        info = {"error": "INVALID_CVR", "status": 400, "message": "CVR number must consist of 8 digits."}
+    else:
+        info = search_cvr_api(cvr_int)
+    return templates.TemplateResponse(
+        "/virksomhed_en.html",
+        {"request": request, "cvrNumber": cvrNumber, "info": info},
+    )
 
 
 @app.get("/da/virksomhed/{cvrNumber}")
@@ -157,3 +187,57 @@ async def company_frontned(request: Request, cvrNumber: str):
 @app.get("/stats")
 async def stats_dashboard(request: Request, _: bool = Depends(_verify_stats_auth)):
     return templates.TemplateResponse("/stats.html", {"request": request, "stats": get_stats()})
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt():
+    return (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /stats\n"
+        "Disallow: /da/search/\n"
+        "\n"
+        "Sitemap: https://apicvr.dk/sitemap.xml\n"
+    )
+
+
+@app.get("/sitemap.xml")
+async def sitemap():
+    content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://apicvr.dk/</loc>
+    <xhtml:link rel="alternate" hreflang="da" href="https://apicvr.dk/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://apicvr.dk/en/"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://apicvr.dk/en/</loc>
+    <xhtml:link rel="alternate" hreflang="da" href="https://apicvr.dk/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://apicvr.dk/en/"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://apicvr.dk/da/mcp</loc>
+    <xhtml:link rel="alternate" hreflang="da" href="https://apicvr.dk/da/mcp"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://apicvr.dk/en/mcp"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://apicvr.dk/en/mcp</loc>
+    <xhtml:link rel="alternate" hreflang="da" href="https://apicvr.dk/da/mcp"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://apicvr.dk/en/mcp"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://apicvr.dk/da/kapitalsog/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>"""
+    return Response(content=content, media_type="application/xml")

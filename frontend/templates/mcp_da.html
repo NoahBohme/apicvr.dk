@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CVR MCP Server — Giv Claude, ChatGPT og andre AI-assistenter direkte adgang til CVR-data via Model Context Protocol. Gratis og open source.">
+    <meta name="keywords" content="CVR MCP server, MCP, Model Context Protocol, Claude MCP, AI CVR opslag, CVR API AI, danske virksomheder AI, ChatGPT CVR">
+    <meta name="author" content="Noah Böhme">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="{{ base_url }}/da/mcp">
+    <link rel="alternate" hreflang="da" href="{{ base_url }}/da/mcp">
+    <link rel="alternate" hreflang="en" href="{{ base_url }}/en/mcp">
+
+    <meta property="og:title" content="CVR MCP Server - Giv din AI adgang til CVR-data">
+    <meta property="og:description" content="Tilslut Claude, ChatGPT og andre AI-assistenter til CVR-registret via MCP. Gratis og open source.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ base_url }}/da/mcp">
+    <meta property="og:locale" content="da_DK">
+
+    <title>CVR MCP Server - Giv din AI adgang til CVR-data</title>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "CVR MCP Server",
+      "url": "https://mcp.apicvr.dk/mcp",
+      "description": "MCP-server der giver AI-assistenter direkte adgang til Det Centrale Virksomhedsregister. Understøtter Claude, ChatGPT og alle MCP-kompatible klienter.",
+      "applicationCategory": "DeveloperApplication",
+      "isAccessibleForFree": true,
+      "author": {
+        "@type": "Person",
+        "name": "Noah Böhme",
+        "url": "https://noahbohme.com"
+      }
+    }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.7;
+            color: #2c3e50;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .top-nav {
+            background: white;
+            padding: 16px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #2c3e50;
+        }
+
+        .nav-brand {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #2c3e50;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .nav-links a {
+            color: #546e7a;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: #2c3e50; }
+        .nav-links a.nav-active { color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 2px; }
+
+        .lang-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-left: 20px;
+            border-left: 1px solid #e0e0e0;
+            margin-left: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .lang-toggle a { color: #90a4ae; font-weight: 600; }
+        .lang-toggle a:hover { color: #2c3e50; }
+        .lang-toggle .active { color: #2c3e50; }
+        .lang-toggle span { color: #cfd8dc; }
+
+        .hero {
+            background: white;
+            border-radius: 2px;
+            padding: 70px 60px;
+            margin-bottom: 20px;
+            border-top: 4px solid #1565c0;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1565c0;
+            font-size: 0.8em;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 2px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #546e7a;
+            max-width: 680px;
+            font-weight: 400;
+        }
+
+        .url-card {
+            background: white;
+            border-radius: 2px;
+            padding: 40px 60px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1565c0;
+        }
+
+        .url-card h2 {
+            font-size: 1.2em;
+            color: #546e7a;
+            font-weight: 500;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85em;
+        }
+
+        .url-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f0f4ff;
+            border: 2px solid #1565c0;
+            border-radius: 2px;
+            padding: 20px 24px;
+            flex-wrap: wrap;
+        }
+
+        .url-box code {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            color: #1565c0;
+            font-weight: 600;
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            padding: 10px 22px;
+            background: #1565c0;
+            color: white;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-family: inherit;
+            font-weight: 600;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover { background: #1976d2; }
+
+        .section {
+            background: white;
+            border-radius: 2px;
+            padding: 50px 60px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            font-size: 1.7em;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            font-weight: 400;
+        }
+
+        .section p {
+            color: #546e7a;
+            margin-bottom: 16px;
+            font-size: 0.95em;
+            line-height: 1.8;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1px;
+            background: #e0e0e0;
+            border: 1px solid #e0e0e0;
+            margin-top: 24px;
+        }
+
+        .tool-item {
+            background: white;
+            padding: 20px 24px;
+        }
+
+        .tool-name {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #1565c0;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .tool-params {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75em;
+            color: #90a4ae;
+            margin-bottom: 8px;
+        }
+
+        .tool-desc { font-size: 0.9em; color: #546e7a; }
+
+        .setup-steps { margin-top: 24px; }
+
+        .step {
+            border: 1px solid #e0e0e0;
+            border-radius: 2px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 24px;
+            background: #f8f9fa;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            background: #2c3e50;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-title { font-weight: 500; color: #2c3e50; font-size: 1em; flex: 1; }
+        .step-arrow { color: #90a4ae; font-size: 0.9em; transition: transform 0.2s; }
+        .step.open .step-arrow { transform: rotate(90deg); }
+
+        .step-body {
+            padding: 0 24px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .step.open .step-body {
+            padding: 24px;
+            max-height: 800px;
+        }
+
+        .step-body p { color: #546e7a; font-size: 0.9em; margin-bottom: 16px; line-height: 1.7; }
+
+        .code-block {
+            background: #1e2a35;
+            color: #e8f4f8;
+            border-radius: 2px;
+            padding: 20px 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+            overflow-x: auto;
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .code-copy {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.1);
+            color: #e8f4f8;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 0.75em;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+
+        .code-copy:hover { background: rgba(255,255,255,0.2); }
+
+        .code-string { color: #a8d8a8; }
+        .code-key { color: #87ceeb; }
+        .code-comment { color: #6b8a9a; font-style: italic; }
+
+        .step-body ol {
+            margin: 0 0 16px 20px;
+            color: #546e7a;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+
+        .step-body ol li { margin-bottom: 6px; }
+
+        .step-body a {
+            color: #1565c0;
+            text-decoration: none;
+            border-bottom: 1px solid #90caf9;
+        }
+
+        .step-body a:hover { border-bottom-color: #1565c0; }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1px;
+            background: #e0e0e0;
+            border: 1px solid #e0e0e0;
+            margin-top: 24px;
+        }
+
+        .example-item {
+            background: white;
+            padding: 20px 24px;
+        }
+
+        .example-item::before {
+            content: '"';
+            display: block;
+            font-size: 2em;
+            color: #1565c0;
+            line-height: 1;
+            margin-bottom: 8px;
+            font-family: Georgia, serif;
+        }
+
+        .example-text { color: #2c3e50; font-size: 0.9em; line-height: 1.5; font-style: italic; }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #78909c;
+            font-size: 0.9em;
+            padding: 30px 0;
+        }
+
+        .footer a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid #cfd8dc;
+            transition: border-color 0.2s ease;
+        }
+
+        .footer a:hover { border-bottom-color: #2c3e50; }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            h1 { font-size: 2em; }
+            .hero, .url-card, .section { padding: 32px 24px; }
+            .tools-grid { grid-template-columns: 1fr; }
+            .top-nav { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .nav-links { flex-wrap: wrap; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="top-nav">
+            <a href="{{ base_url }}/" class="nav-brand">CVR-API</a>
+            <div class="nav-links">
+                <a href="{{ docs_url }}">API Docs</a>
+                <a href="{{ base_url }}/da/mcp" class="nav-active">MCP Server</a>
+                <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a>
+                <div class="lang-toggle">
+                    <a href="{{ base_url }}/da/mcp" class="active">DA</a>
+                    <span>|</span>
+                    <a href="{{ base_url }}/en/mcp">EN</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="hero">
+            <div class="hero-tag">MCP Server</div>
+            <h1>CVR til din AI-assistent</h1>
+            <p class="subtitle">Giv Claude, ChatGPT og andre AI-assistenter direkte adgang til Det Centrale Virksomhedsregister via Model Context Protocol (MCP).</p>
+        </div>
+
+        <div class="url-card">
+            <h2>Server URL</h2>
+            <div class="url-box">
+                <code>https://mcp.apicvr.dk/mcp</code>
+                <button class="copy-btn" onclick="copyUrl('https://mcp.apicvr.dk/mcp', this)">Kopiér</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Hvad er MCP?</h2>
+            <p>Model Context Protocol (MCP) er en åben standard der gør det muligt for AI-assistenter at forbinde til eksterne datakilder og tjenester i realtid. I stedet for at AI'en kun kender til data fra sin træning, kan den aktivt hente opdaterede oplysninger.</p>
+            <p>Med CVR MCP-serveren kan du spørge din AI-assistent om danske virksomheder — og den vil slå det op i CVR-registret, som om den selv brugte API'et. Perfekt til research, due diligence, leadgenerering og meget mere.</p>
+        </div>
+
+        <div class="section">
+            <h2>Tilgængelige funktioner</h2>
+            <p>CVR MCP-serveren eksponerer 7 funktioner:</p>
+            <div class="tools-grid">
+                <div class="tool-item">
+                    <div class="tool-name">lookup_company</div>
+                    <div class="tool-params">(cvr_number: int)</div>
+                    <div class="tool-desc">Hent alle oplysninger om en virksomhed via CVR-nummer</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-name">search_company_by_name</div>
+                    <div class="tool-params">(name: str)</div>
+                    <div class="tool-desc">Søg virksomheder på navn (præfiks-match)</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-name">search_company_fuzzy</div>
+                    <div class="tool-params">(name: str)</div>
+                    <div class="tool-desc">Fuzzy-søgning på virksomhedsnavn — finder resultater selvom stavningen ikke er helt præcis</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-name">search_company_by_email</div>
+                    <div class="tool-params">(email: str)</div>
+                    <div class="tool-desc">Find virksomheder registreret med en given emailadresse</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-name">search_company_by_email_domain</div>
+                    <div class="tool-params">(domain: str)</div>
+                    <div class="tool-desc">Find alle virksomheder med email på et bestemt domæne, f.eks. <code>lego.com</code></div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-name">search_company_by_phone</div>
+                    <div class="tool-params">(phone: str)</div>
+                    <div class="tool-desc">Find virksomheder registreret med et bestemt telefonnummer</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-name">search_company_by_address</div>
+                    <div class="tool-params">(address: str, postal_code?: str)</div>
+                    <div class="tool-desc">Find virksomheder på en bestemt adresse, valgfrit filtreret på postnummer</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Opsætningsvejledning</h2>
+            <p>Vælg din AI-assistent og følg vejledningen:</p>
+            <div class="setup-steps">
+                <div class="step open" id="step-claude-ai">
+                    <div class="step-header" onclick="toggleStep('step-claude-ai')">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Claude.ai (web)</div>
+                        <div class="step-arrow">▶</div>
+                    </div>
+                    <div class="step-body">
+                        <p>Claude.ai understøtter MCP-integrationer fra Pro og Team planer. Tilføj CVR-serveren på under et minut:</p>
+                        <ol>
+                            <li>Gå til <a href="https://claude.ai/settings" target="_blank" rel="noopener">claude.ai/settings</a></li>
+                            <li>Klik på <strong>Integrations</strong></li>
+                            <li>Klik på <strong>Add more</strong> eller <strong>Add integration</strong></li>
+                            <li>Indsæt URL: <code>https://mcp.apicvr.dk/mcp</code></li>
+                            <li>Klik <strong>Save</strong> — CVR-funktionerne er nu tilgængelige i alle dine samtaler</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="step" id="step-claude-desktop">
+                    <div class="step-header" onclick="toggleStep('step-claude-desktop')">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Claude Desktop (Mac / Windows)</div>
+                        <div class="step-arrow">▶</div>
+                    </div>
+                    <div class="step-body">
+                        <p>Åbn Claude Desktop's konfigurationsfil og tilføj CVR MCP-serveren:</p>
+                        <p><strong>Placering af konfigurationsfil:</strong><br>
+                        Mac: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code><br>
+                        Windows: <code>%APPDATA%\Claude\claude_desktop_config.json</code></p>
+                        <p>Tilføj følgende til filen (opret filen, hvis den ikke eksisterer):</p>
+                        <div class="code-block" id="desktop-config">
+                            <button class="code-copy" onclick="copyCode('desktop-config', this)">Kopiér</button>
+<span class="code-key">{</span>
+  <span class="code-key">"mcpServers"</span>: {
+    <span class="code-key">"apicvr"</span>: {
+      <span class="code-key">"command"</span>: <span class="code-string">"npx"</span>,
+      <span class="code-key">"args"</span>: [<span class="code-string">"-y"</span>, <span class="code-string">"mcp-remote"</span>, <span class="code-string">"https://mcp.apicvr.dk/mcp"</span>]
+    }
+  }
+<span class="code-key">}</span></div>
+                        <p>Genstart Claude Desktop — du kan nu spørge om danske virksomheder direkte i dine chats.</p>
+                    </div>
+                </div>
+
+                <div class="step" id="step-claude-code">
+                    <div class="step-header" onclick="toggleStep('step-claude-code')">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Claude Code (CLI)</div>
+                        <div class="step-arrow">▶</div>
+                    </div>
+                    <div class="step-body">
+                        <p>Tilføj CVR MCP-serveren til Claude Code med én kommando:</p>
+                        <div class="code-block" id="code-cli">
+                            <button class="code-copy" onclick="copyCode('code-cli', this)">Kopiér</button>
+claude mcp add apicvr --transport http https://mcp.apicvr.dk/mcp</div>
+                        <p>Eller tilføj manuelt til <code>.claude/settings.json</code> i dit projekt:</p>
+                        <div class="code-block" id="code-settings">
+                            <button class="code-copy" onclick="copyCode('code-settings', this)">Kopiér</button>
+<span class="code-key">{</span>
+  <span class="code-key">"mcpServers"</span>: {
+    <span class="code-key">"apicvr"</span>: {
+      <span class="code-key">"type"</span>: <span class="code-string">"http"</span>,
+      <span class="code-key">"url"</span>: <span class="code-string">"https://mcp.apicvr.dk/mcp"</span>
+    }
+  }
+<span class="code-key">}</span></div>
+                    </div>
+                </div>
+
+                <div class="step" id="step-other">
+                    <div class="step-header" onclick="toggleStep('step-other')">
+                        <div class="step-number">4</div>
+                        <div class="step-title">Andre MCP-kompatible klienter</div>
+                        <div class="step-arrow">▶</div>
+                    </div>
+                    <div class="step-body">
+                        <p>CVR MCP-serveren er fuldt kompatibel med alle klienter der understøtter MCP HTTP-transport (Streamable HTTP). Brug server-URL'en:</p>
+                        <div class="code-block">https://mcp.apicvr.dk/mcp</div>
+                        <p>Serveren kræver ingen API-nøgle eller autentificering.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Eksempler på hvad du kan spørge om</h2>
+            <p>Når CVR MCP-serveren er tilsluttet, kan du stille din AI spørgsmål som disse:</p>
+            <div class="examples-grid">
+                <div class="example-item">
+                    <div class="example-text">Hvad er CVR-nummeret for LEGO Group, og hvad er deres branche?</div>
+                </div>
+                <div class="example-item">
+                    <div class="example-text">Find alle virksomheder på Vesterbrogade 1 i København</div>
+                </div>
+                <div class="example-item">
+                    <div class="example-text">Slå Novo Nordisk op og fortæl mig deres officielle adresse og startdato</div>
+                </div>
+                <div class="example-item">
+                    <div class="example-text">Er der nogen virksomheder registreret med domænet maersk.com?</div>
+                </div>
+                <div class="example-item">
+                    <div class="example-text">Søg efter virksomheder der ligner "Carlsberg" — inkl. stavefejl</div>
+                </div>
+                <div class="example-item">
+                    <div class="example-text">Find virksomheden der er registreret med telefonnummeret 70 12 34 56</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Udviklet af <a href="https://noahbohme.com">Noah Böhme</a> · <a href="{{ base_url }}/">CVR-API forside</a> · <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a></p>
+        </div>
+    </div>
+
+    <script>
+        function copyUrl(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = 'Kopieret!';
+                setTimeout(() => btn.textContent = 'Kopiér', 2000);
+            });
+        }
+
+        function copyCode(blockId, btn) {
+            const block = document.getElementById(blockId);
+            const text = block.innerText.replace(/^Kopiér\n/, '');
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = 'Kopieret!';
+                setTimeout(() => btn.textContent = 'Kopiér', 2000);
+            });
+        }
+
+        function toggleStep(id) {
+            const step = document.getElementById(id);
+            step.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

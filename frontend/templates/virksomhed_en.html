@@ -1,42 +1,99 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% set has_error = info.get('error') %}
     {% if has_error %}
-    <meta name="description" content="Fejl ved virksomhedsopslag - CVR-API">
-    <title>Fejl ved opslag - CVR-API</title>
+    <meta name="description" content="Company lookup error - CVR-API">
+    <title>Error - CVR-API</title>
     {% else %}
-    <meta name="description" content="{{ info['name'] }} — CVR-nummer {{ info['vat'] }}. Virksomhedsoplysninger fra Det Centrale Virksomhedsregister.">
+    <meta name="description" content="{{ info['name'] }} — CVR number {{ info['vat'] }}. Danish company details from the Central Business Register.">
     <meta name="robots" content="noindex">
     <title>{{ info['name'] }} (CVR {{ info['vat'] }}) - CVR-API</title>
     {% endif %}
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #f8f9fa;
             min-height: 100vh;
-            padding: 40px 20px;
+            padding: 20px;
             line-height: 1.7;
             color: #2c3e50;
         }
 
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .top-nav {
+            background: white;
+            padding: 16px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #2c3e50;
         }
+
+        .nav-brand {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #2c3e50;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .nav-links a {
+            color: #546e7a;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: #2c3e50; }
+
+        .lang-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-left: 20px;
+            border-left: 1px solid #e0e0e0;
+            margin-left: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .lang-toggle a { color: #90a4ae; font-weight: 600; }
+        .lang-toggle a:hover { color: #2c3e50; }
+        .lang-toggle .active { color: #2c3e50; }
+        .lang-toggle span { color: #cfd8dc; }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #546e7a;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: color 0.2s;
+        }
+
+        .back-link:before { content: "← "; }
+        .back-link:hover { color: #2c3e50; }
 
         .header {
             background: white;
             padding: 50px 60px;
-            margin-bottom: 40px;
+            margin-bottom: 24px;
             border-top: 4px solid #2c3e50;
             border-radius: 2px;
         }
@@ -78,23 +135,16 @@
             transition: border-color 0.2s ease;
         }
 
-        .protection-link:hover {
-            border-bottom-color: #2c3e50;
-            color: #2c3e50;
-        }
+        .protection-link:hover { border-bottom-color: #2c3e50; color: #2c3e50; }
 
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 24px;
-            margin-bottom: 40px;
+            margin-bottom: 24px;
         }
 
-        .card {
-            background: white;
-            border-radius: 2px;
-            overflow: hidden;
-        }
+        .card { background: white; border-radius: 2px; overflow: hidden; }
 
         .card-header {
             padding: 24px 30px;
@@ -107,9 +157,7 @@
             font-weight: 400;
         }
 
-        .card-body {
-            padding: 0;
-        }
+        .card-body { padding: 0; }
 
         .info-item {
             padding: 18px 30px;
@@ -119,28 +167,24 @@
             gap: 4px;
         }
 
-        .info-item:last-child {
-            border-bottom: none;
-        }
+        .info-item:last-child { border-bottom: none; }
 
         .info-label {
-            font-size: 0.85em;
+            font-size: 0.82em;
             color: #78909c;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .info-value {
-            font-size: 1em;
-            color: #2c3e50;
-        }
+        .info-value { font-size: 1em; color: #2c3e50; }
 
         .api-section {
             background: white;
             padding: 30px;
             border-radius: 2px;
             border-left: 4px solid #2c3e50;
+            margin-bottom: 20px;
         }
 
         .api-section h3 {
@@ -164,28 +208,7 @@
             word-break: break-all;
         }
 
-        .api-link:hover {
-            background: #2c3e50;
-            color: white;
-            border-color: #2c3e50;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 30px;
-            color: #546e7a;
-            text-decoration: none;
-            font-size: 0.95em;
-            transition: color 0.2s ease;
-        }
-
-        .back-link:hover {
-            color: #2c3e50;
-        }
-
-        .back-link:before {
-            content: "← ";
-        }
+        .api-link:hover { background: #2c3e50; color: white; border-color: #2c3e50; }
 
         .error-box {
             background: white;
@@ -195,42 +218,26 @@
             text-align: center;
         }
 
-        .error-box h1 {
-            font-size: 2em;
-            margin-bottom: 16px;
-            color: #2c3e50;
-            font-weight: 400;
-        }
+        .error-box h1 { font-size: 2em; margin-bottom: 16px; color: #2c3e50; font-weight: 400; }
+        .error-box p { color: #546e7a; margin-bottom: 18px; }
+        .error-details { font-size: 0.9em; color: #90a4ae; }
 
-        .error-box p {
-            color: #546e7a;
-            margin-bottom: 18px;
-        }
-
-        .error-details {
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #78909c;
             font-size: 0.9em;
-            color: #90a4ae;
+            padding: 24px 0;
         }
 
-        .top-nav {
-            background: white;
-            padding: 16px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-radius: 2px;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #2c3e50;
+        .footer a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid #cfd8dc;
         }
-        .nav-brand { font-size: 1.2em; font-weight: 700; color: #2c3e50; text-decoration: none; letter-spacing: -0.5px; }
-        .nav-links { display: flex; align-items: center; gap: 28px; }
-        .nav-links a { color: #546e7a; text-decoration: none; font-size: 0.9em; font-weight: 500; transition: color 0.2s; }
-        .nav-links a:hover { color: #2c3e50; }
-        .lang-toggle { display: flex; align-items: center; gap: 6px; padding-left: 20px; border-left: 1px solid #e0e0e0; margin-left: 4px; font-size: 0.85em; font-weight: 600; }
-        .lang-toggle a { color: #90a4ae; font-weight: 600; }
-        .lang-toggle a:hover { color: #2c3e50; }
-        .lang-toggle .active { color: #2c3e50; }
-        .lang-toggle span { color: #cfd8dc; }
+
+        .footer a:hover { border-bottom-color: #2c3e50; }
 
         @media (max-width: 768px) {
             body { padding: 12px; }
@@ -247,60 +254,61 @@
 <body>
     <div class="container">
         <nav class="top-nav">
-            <a href="/" class="nav-brand">CVR-API</a>
+            <a href="/en/" class="nav-brand">CVR-API</a>
             <div class="nav-links">
                 <a href="/docs">API Docs</a>
-                <a href="/da/mcp">MCP Server</a>
+                <a href="/en/mcp">MCP Server</a>
                 <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a>
                 <div class="lang-toggle">
-                    <a href="/da/virksomhed/{{ cvrNumber }}" class="active">DA</a>
+                    <a href="/da/virksomhed/{{ cvrNumber }}">DA</a>
                     <span>|</span>
-                    <a href="/en/company/{{ cvrNumber }}">EN</a>
+                    <a href="/en/company/{{ cvrNumber }}" class="active">EN</a>
                 </div>
             </div>
         </nav>
+
         {% if has_error %}
             <div class="error-box">
-                <h1>Kunne ikke hente virksomhedsoplysninger</h1>
-                <p>Der opstod en fejl under opslaget. Prøv igen senere eller kontakt support, hvis problemet fortsætter.</p>
-                <p class="error-details">Fejlkode: {{ info['error'] }}{% if info.get('status') %} · Status: {{ info['status'] }}{% endif %}</p>
+                <h1>Could not retrieve company information</h1>
+                <p>An error occurred during the lookup. Please try again later or contact support if the problem persists.</p>
+                <p class="error-details">Error code: {{ info['error'] }}{% if info.get('status') %} · Status: {{ info['status'] }}{% endif %}</p>
             </div>
         {% else %}
-            <a href="/" class="back-link">Tilbage til forsiden</a>
-            
+            <a href="/en/" class="back-link">Back to home</a>
+
             <div class="header">
                 <h1>{{ info['name'] }}</h1>
-                
+
                 {% set reklamebeskyttelset = info['protected'] %}
                 {% if reklamebeskyttelset == true %}
-                    <div class="protection-badge protected">Reklamebeskyttet</div>
+                    <div class="protection-badge protected">Ad Protected</div>
                     <br>
-                    <a href="https://datacvr.virk.dk/artikel/reklamebeskyttelse" class="protection-link">Læs mere om vilkår for reklamebeskyttelse</a>
+                    <a href="https://datacvr.virk.dk/artikel/reklamebeskyttelse" class="protection-link" target="_blank" rel="noopener">Read more about advertising protection rules</a>
                 {% else %}
-                    <div class="protection-badge not-protected">Ikke reklamebeskyttet</div>
+                    <div class="protection-badge not-protected">Not Ad Protected</div>
                 {% endif %}
             </div>
 
             <div class="cards-grid">
                 <div class="card">
                     <div class="card-header">
-                        <h2>Grundlæggende oplysninger</h2>
+                        <h2>Basic Information</h2>
                     </div>
                     <div class="card-body">
                         <div class="info-item">
-                            <span class="info-label">Virksomhedsnavn</span>
+                            <span class="info-label">Company Name</span>
                             <span class="info-value">{{ info['name'] }}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">CVR-nummer</span>
+                            <span class="info-label">CVR Number</span>
                             <span class="info-value">{{ info['vat'] }}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Startdato</span>
+                            <span class="info-label">Founded</span>
                             <span class="info-value">{{ info['startdate'] }}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Adresse</span>
+                            <span class="info-label">Address</span>
                             <span class="info-value">{{ info['address'] }} {{ info['zipcode'] }}</span>
                         </div>
                     </div>
@@ -308,7 +316,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2>Virksomhedsdetaljer</h2>
+                        <h2>Company Details</h2>
                     </div>
                     <div class="card-body">
                         <div class="info-item">
@@ -316,11 +324,11 @@
                             <span class="info-value">{{ info['status'] }}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Branche</span>
+                            <span class="info-label">Industry</span>
                             <span class="info-value">{{ info['industrydesc'] }}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Virksomhedsform</span>
+                            <span class="info-label">Company Type</span>
                             <span class="info-value">{{ info['companydesc'] }}</span>
                         </div>
                     </div>
@@ -332,6 +340,10 @@
                 <a href="https://apicvr.dk/api/v1/{{ info['vat'] }}" class="api-link">https://apicvr.dk/api/v1/{{ info['vat'] }}</a>
             </div>
         {% endif %}
+
+        <div class="footer">
+            <p>Built by <a href="https://noahbohme.com">Noah Böhme</a> · <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a></p>
+        </div>
     </div>
 </body>
 </html>

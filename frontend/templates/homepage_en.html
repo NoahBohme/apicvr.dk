@@ -1,29 +1,29 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Gratis open source CVR-API til virksomhedsopslag i Det Centrale Virksomhedsregister. Hurtig, pålidelig og let at integrere. Hent CVR-data via REST API eller MCP-server til AI-assistenter.">
-    <meta name="keywords" content="CVR API, virksomhedsopslag, CVR-register, danske virksomheder, company lookup, REST API, open source API, gratis API, CVR-nummer, virksomhedsdata, MCP server, AI integration, Claude MCP">
+    <meta name="description" content="Free open source CVR API for looking up Danish companies in the Central Business Register. Fast, reliable and easy to integrate. Fetch company data via REST API or MCP server for AI assistants.">
+    <meta name="keywords" content="CVR API, Danish company lookup, company register, Danish companies, company search, REST API, open source API, free API, CVR number, company data, MCP server, AI integration, Claude MCP, ChatGPT MCP">
     <meta name="author" content="Noah Böhme">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="{{ base_url }}/">
+    <link rel="canonical" href="{{ base_url }}/en/">
     <link rel="alternate" hreflang="da" href="{{ base_url }}/">
     <link rel="alternate" hreflang="en" href="{{ base_url }}/en/">
     <link rel="alternate" hreflang="x-default" href="{{ base_url }}/">
 
-    <meta property="og:title" content="CVR-API - Gratis Open Source API til CVR-opslag">
-    <meta property="og:description" content="Det bedste gratis API til opslag i Det Centrale Virksomhedsregister. Open source, hurtig og pålidelig. Inkl. MCP-server til AI-assistenter.">
+    <meta property="og:title" content="CVR-API - Free Open Source API for Danish Company Lookups">
+    <meta property="og:description" content="The best free API for looking up Danish companies in the Central Business Register. Open source, fast and reliable. Includes MCP server for AI assistants.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ base_url }}/">
-    <meta property="og:locale" content="da_DK">
-    <meta property="og:locale:alternate" content="en_US">
+    <meta property="og:url" content="{{ base_url }}/en/">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:locale:alternate" content="da_DK">
 
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="CVR-API - Gratis Open Source API til CVR-opslag">
-    <meta name="twitter:description" content="Gratis REST API og MCP-server til opslag i Det Centrale Virksomhedsregister.">
+    <meta name="twitter:title" content="CVR-API - Free Open Source API for Danish Company Lookups">
+    <meta name="twitter:description" content="Free REST API and MCP server for looking up Danish companies in the Central Business Register (CVR).">
 
-    <title>CVR-API - Gratis Open Source API til Virksomhedsopslag i CVR-registret</title>
+    <title>CVR-API - Free Open Source API for Danish Company Lookups</title>
 
     <script type="application/ld+json">
     {
@@ -31,7 +31,7 @@
       "@type": "WebApplication",
       "name": "CVR-API",
       "url": "https://apicvr.dk",
-      "description": "Gratis open source REST API og MCP-server til opslag i Det Centrale Virksomhedsregister (CVR). Søg danske virksomheder på navn, CVR-nummer, email, telefon og adresse.",
+      "description": "Free open source REST API and MCP server for looking up Danish companies in the Central Business Register (CVR). Search companies by name, CVR number, email, phone, and address.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "All",
       "isAccessibleForFree": true,
@@ -436,39 +436,39 @@
             <a href="{{ base_url }}/" class="nav-brand">CVR-API</a>
             <div class="nav-links">
                 <a href="{{ docs_url }}">API Docs</a>
-                <a href="{{ base_url }}/da/mcp">MCP Server</a>
+                <a href="{{ base_url }}/en/mcp">MCP Server</a>
                 <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a>
                 <div class="lang-toggle">
-                    <a href="{{ base_url }}/" class="active">DA</a>
+                    <a href="{{ base_url }}/">DA</a>
                     <span>|</span>
-                    <a href="{{ base_url }}/en/">EN</a>
+                    <a href="{{ base_url }}/en/" class="active">EN</a>
                 </div>
             </div>
         </nav>
 
         <div class="hero">
             <h1>CVR-API</h1>
-            <p class="subtitle">Gratis open source API til virksomhedsopslag i Det Centrale Virksomhedsregister — inkl. MCP-server til AI-assistenter</p>
+            <p class="subtitle">Free open source API for looking up Danish companies in the Central Business Register — including an MCP server for AI assistants</p>
         </div>
 
         <div class="cta-section">
-            <h2>Kom i gang med CVR-API</h2>
-            <p>Få adgang til omfattende CVR-data via REST API eller tilslut din AI-assistent med MCP</p>
+            <h2>Get started with CVR-API</h2>
+            <p>Access comprehensive CVR data via REST API or connect your AI assistant using MCP</p>
             <div class="cta-buttons">
-                <a href="{{ docs_url }}" class="btn btn-primary">Læs Dokumentationen</a>
-                <a href="{{ base_url }}/da/mcp" class="btn btn-secondary">MCP Server</a>
+                <a href="{{ docs_url }}" class="btn btn-primary">Read the Docs</a>
+                <a href="{{ base_url }}/en/mcp" class="btn btn-secondary">MCP Server</a>
                 <a href="https://github.com/NoahBohme/apicvr.dk" class="btn btn-secondary">GitHub</a>
             </div>
         </div>
 
         <div class="demo-section">
-            <h2>Prøv API'et</h2>
-            <p class="demo-subtitle">Søg på virksomhedsnavn eller indtast et CVR-nummer direkte</p>
+            <h2>Try the API</h2>
+            <p class="demo-subtitle">Search by company name or enter a CVR number directly</p>
             <div class="search-container">
                 <input
                     type="text"
                     id="searchInput"
-                    placeholder="Søg virksomhed eller indtast CVR-nummer..."
+                    placeholder="Search company or enter CVR number..."
                     autocomplete="off"
                 />
                 <div id="suggestions" class="suggestions"></div>
@@ -477,79 +477,79 @@
 
         <div class="features">
             <div class="feature">
-                <h3>Lynhurtig</h3>
-                <p>Få CVR-data på millisekunder med vores optimerede REST API</p>
+                <h3>Lightning Fast</h3>
+                <p>Get CVR data in milliseconds with our optimized REST API</p>
             </div>
             <div class="feature">
                 <h3>Open Source</h3>
-                <p>Fuldstændig gratis og transparent kildekode på GitHub</p>
+                <p>Completely free and transparent source code on GitHub</p>
             </div>
             <div class="feature">
-                <h3>Pålidelig</h3>
-                <p>Troværdige data direkte fra CVR-registret</p>
+                <h3>Reliable</h3>
+                <p>Accurate data sourced directly from the CVR register</p>
             </div>
             <div class="feature">
-                <h3>AI-klar</h3>
-                <p>MCP-server til Claude, ChatGPT og andre AI-assistenter</p>
+                <h3>AI-Ready</h3>
+                <p>MCP server for Claude, ChatGPT and other AI assistants</p>
             </div>
         </div>
 
         <div class="mcp-section">
-            <h2>MCP Server til AI-assistenter</h2>
-            <p>Brug CVR-API direkte fra Claude, ChatGPT og andre AI-assistenter via Model Context Protocol (MCP). Giv din AI adgang til live CVR-data — søg på virksomheder, hent kontaktoplysninger og meget mere.</p>
+            <h2>MCP Server for AI Assistants</h2>
+            <p>Use CVR-API directly from Claude, ChatGPT and other AI assistants via the Model Context Protocol (MCP). Give your AI access to live CVR data — search for companies, retrieve contact details and much more.</p>
             <div class="mcp-url-box">
                 <code>https://mcp.apicvr.dk/mcp</code>
-                <button class="copy-btn" onclick="copyMcpUrl(this)">Kopiér URL</button>
+                <button class="copy-btn" onclick="copyMcpUrl(this)">Copy URL</button>
             </div>
             <div class="mcp-tools">
                 <div class="mcp-tool">
                     <div class="mcp-tool-name">lookup_company</div>
-                    <div class="mcp-tool-desc">Opslag via CVR-nummer</div>
+                    <div class="mcp-tool-desc">Look up company by CVR number</div>
                 </div>
                 <div class="mcp-tool">
                     <div class="mcp-tool-name">search_company_by_name</div>
-                    <div class="mcp-tool-desc">Søg virksomhed på navn</div>
+                    <div class="mcp-tool-desc">Search company by name</div>
                 </div>
                 <div class="mcp-tool">
                     <div class="mcp-tool-name">search_company_fuzzy</div>
-                    <div class="mcp-tool-desc">Fuzzy-søgning på navn</div>
+                    <div class="mcp-tool-desc">Fuzzy search by name</div>
                 </div>
                 <div class="mcp-tool">
                     <div class="mcp-tool-name">search_company_by_email</div>
-                    <div class="mcp-tool-desc">Find virksomhed via email</div>
+                    <div class="mcp-tool-desc">Find company by email</div>
                 </div>
                 <div class="mcp-tool">
                     <div class="mcp-tool-name">search_company_by_phone</div>
-                    <div class="mcp-tool-desc">Find virksomhed via telefon</div>
+                    <div class="mcp-tool-desc">Find company by phone</div>
                 </div>
                 <div class="mcp-tool">
                     <div class="mcp-tool-name">search_company_by_address</div>
-                    <div class="mcp-tool-desc">Find virksomheder på adresse</div>
+                    <div class="mcp-tool-desc">Find companies by address</div>
                 </div>
                 <div class="mcp-tool">
                     <div class="mcp-tool-name">search_company_by_email_domain</div>
-                    <div class="mcp-tool-desc">Find virksomheder på domæne</div>
+                    <div class="mcp-tool-desc">Find companies by domain</div>
                 </div>
             </div>
-            <a href="{{ base_url }}/da/mcp" class="mcp-cta">Se opsætningsvejledning</a>
+            <a href="{{ base_url }}/en/mcp" class="mcp-cta">View setup instructions</a>
         </div>
 
         <div class="disclaimer">
-            <h2>Vigtig information om reklamebeskyttelse</h2>
+            <h2>Important: Advertising Protection Notice</h2>
             <div class="disclaimer-content">
-                <p>Alle brugere af CVR-API skal overholde reglerne om reklamebeskyttelse i henhold til CVR-loven.</p>
-                <p><strong>Virksomheder kan frabede sig reklamehenvendelser.</strong> Som bruger forpligter du dig til:</p>
+                <p>All users of CVR-API must comply with the advertising protection rules under Danish CVR law.</p>
+                <p><strong>Companies may opt out of advertising contact.</strong> As a user you commit to:</p>
                 <ul>
-                    <li>At respektere virksomheders ønske om reklamebeskyttelse</li>
-                    <li>At oplysninger om reklamebeskyttede virksomheder eller p-enheder ikke må bruges til direkte markedsføring, herunder telefonopkald, målrettede postudsendelser og lignende</li>
-                    <li>At markere tydeligt ved videregivelse til tredjemand, at en virksomhed eller p-enhed er beskyttet</li>
+                    <li>Respecting companies' wishes regarding advertising protection</li>
+                    <li>Not using information about advertising-protected companies or production units for direct marketing, including phone calls, targeted mailings and similar activities</li>
+                    <li>Clearly marking when passing data to third parties that a company or production unit is protected</li>
                 </ul>
-                <p><strong>Disse forpligtelser følger af CVR-lovens § 19 og § 22.</strong> Overtrædelse af disse regler kan medføre juridiske konsekvenser.</p>
+                <p><strong>These obligations follow from CVR Act § 19 and § 22.</strong> Violation of these rules may result in legal consequences.</p>
             </div>
         </div>
 
         <div class="footer">
-            <p>Udviklet af <a href="https://noahbohme.com">Noah Böhme</a> · Open source projekt · <a href="https://github.com/NoahBohme/apicvr.dk">Bidrag på GitHub</a></p>
+            <p>Built by <a href="https://noahbohme.com">Noah Böhme</a> · Open source project · <a href="https://github.com/NoahBohme/apicvr.dk">Contribute on GitHub</a></p>
         </div>
     </div>
 
@@ -570,7 +570,7 @@
             }
 
             if (/^\d{8}$/.test(query)) {
-                window.location.href = `${BASE_URL}/da/virksomhed/${query}`;
+                window.location.href = `${BASE_URL}/en/company/${query}`;
                 return;
             }
 
@@ -613,7 +613,7 @@
         }
 
         function goToCompany(cvr) {
-            window.location.href = `${BASE_URL}/da/virksomhed/${cvr}`;
+            window.location.href = `${BASE_URL}/en/company/${cvr}`;
         }
 
         document.addEventListener('click', function(e) {
@@ -624,8 +624,8 @@
 
         function copyMcpUrl(btn) {
             navigator.clipboard.writeText('https://mcp.apicvr.dk/mcp').then(() => {
-                btn.textContent = 'Kopieret!';
-                setTimeout(() => btn.textContent = 'Kopiér URL', 2000);
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy URL', 2000);
             });
         }
     </script>
