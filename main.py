@@ -2,7 +2,7 @@ import os
 import secrets
 import time
 from apis.searchcvr import *
-from typing import Union
+from typing import Optional, Union
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -146,29 +146,36 @@ def read_root(cvrNumber: int):
     return search_cvr_api(cvrNumber)
 
 @app.get("/api/v1/search/company/{companyName}")
-def search_company(companyName: str):
-    return search_cvr_by_name(companyName)
+def search_company(companyName: str, limit: int = 100):
+    return search_cvr_by_name(companyName, limit=limit)
 
 @app.get("/api/v1/fuzzy_search/company/{companyName}")
-def search_company_fuzzy(companyName: str):
-    return search_cvr_by_fuzzy_name(companyName)
+def search_company_fuzzy(companyName: str, limit: int = 100):
+    return search_cvr_by_fuzzy_name(companyName, limit=limit)
 
 @app.get("/api/v1/email/{email}")
-def search_email(email: str):
-    return search_cvr_by_email(email)
+def search_email(email: str, limit: int = 100):
+    return search_cvr_by_email(email, limit=limit)
 
 @app.get("/api/v1/email_domain/{domain}")
-def search_email_domain(domain: str):
-    return search_cvr_by_email_domain(domain)
+def search_email_domain(domain: str, limit: int = 100):
+    return search_cvr_by_email_domain(domain, limit=limit)
 
 @app.get("/api/v1/phone/{phone}")
-def search_phone(phone: str):
-    return search_cvr_by_phone(phone)
+def search_phone(phone: str, limit: int = 100):
+    return search_cvr_by_phone(phone, limit=limit)
 
 
 @app.get("/api/v1/search/address")
-def search_address(address: str, postal_code: str = None):
-    return search_cvr_by_address(address, postal_code)
+def search_address(address: str, postal_code: str = None, limit: int = 100):
+    return search_cvr_by_address(address, postal_code, limit=limit)
+
+
+@app.get("/api/v1/search")
+def search(name: Optional[str] = None, cvr: Optional[int] = None, limit: int = 100):
+    if not name and cvr is None:
+        raise HTTPException(status_code=400, detail="At least one of 'name' or 'cvr' must be provided.")
+    return search_cvr_combined(name=name, cvr=cvr, limit=limit)
 
 
 

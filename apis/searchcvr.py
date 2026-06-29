@@ -104,7 +104,54 @@ def fetch_p_units(p_numbers: list) -> list:
             p_units.append(format_p_unit_data(p_unit))
     return p_units
 
-def search_cvr_by_name(company_name: str) -> list:
+def search_cvr_combined(name: Optional[str] = None, cvr: Optional[int] = None, limit: int = 100) -> list:
+    """Search for companies by name and/or CVR number. At least one must be provided."""
+    must_clauses = []
+
+    if cvr is not None:
+        must_clauses.append({
+            "term": {"Vrvirksomhed.cvrNummer": cvr}
+        })
+
+    if name:
+        must_clauses.append({
+            "match_phrase_prefix": {
+                "Vrvirksomhed.virksomhedMetadata.nyesteNavn.navn": name
+            }
+        })
+
+    if not must_clauses:
+        return []
+
+    payload = json.dumps({
+        "_source": ["Vrvirksomhed"],
+        "query": {"bool": {"must": must_clauses}},
+        "size": limit
+    })
+    headers = {
+        'Authorization': 'Basic ' + APITOKEN,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.post(url, headers=headers, data=payload, timeout=10)
+    if response.status_code != 200:
+        return {"error": "HTTP_ERROR", "status": response.status_code, "message": response.text}
+
+    try:
+        json_response = response.json()
+    except ValueError:
+        return {"error": "INVALID_RESPONSE"}
+
+    companies = []
+    for hit in json_response.get('hits', {}).get('hits', []):
+        company = hit['_source'].get('Vrvirksomhed', {})
+        cvr_number = company.get('cvrNummer')
+        if cvr_number:
+            companies.append(format_company_data(company, cvr_number))
+    return companies
+
+
+def search_cvr_by_name(company_name: str, limit: int = 100) -> list:
     """Search for companies matching the provided name."""
     payload = json.dumps({
         "_source": ["Vrvirksomhed"],
@@ -113,7 +160,7 @@ def search_cvr_by_name(company_name: str) -> list:
                 "Vrvirksomhed.virksomhedMetadata.nyesteNavn.navn": company_name
             }
         },
-        "size": 100  # Adjust the size as needed
+        "size": limit
     })
     headers = {
         'Authorization': 'Basic ' + APITOKEN,
@@ -133,9 +180,8 @@ def search_cvr_by_name(company_name: str) -> list:
     return companies
 
 
-def search_cvr_by_fuzzy_name(company_name: str) -> list:
+def search_cvr_by_fuzzy_name(company_name: str, limit: int = 100) -> list:
     """Return companies matching the name using fuzzy search."""
-    # Define the payload for the multi_match query
     payload = json.dumps({
         "_source": ["Vrvirksomhed"],
         "query": {
@@ -145,7 +191,7 @@ def search_cvr_by_fuzzy_name(company_name: str) -> list:
                 "fuzziness": "AUTO"
             }
         },
-        "size": 100
+        "size": limit
     })
 
     # Set up headers with authorization and content type
@@ -192,7 +238,7 @@ def search_cvr_by_fuzzy_name(company_name: str) -> list:
 
 
 
-def search_cvr_by_email(email: str) -> list:
+def search_cvr_by_email(email: str, limit: int = 100) -> list:
     """Find companies registered with the given email address."""
     payload = json.dumps({
         "_source": ["*"],
@@ -201,7 +247,7 @@ def search_cvr_by_email(email: str) -> list:
                 "Vrvirksomhed.elektroniskPost.kontaktoplysning": email
             }
         },
-        "size": 100  # Adjust the size as needed
+        "size": limit
     })
     headers = {
         'Authorization': 'Basic ' + APITOKEN,
@@ -220,7 +266,7 @@ def search_cvr_by_email(email: str) -> list:
     return companies
 
 
-def search_cvr_by_email_domain(email_domain: str) -> list:
+def search_cvr_by_email_domain(email_domain: str, limit: int = 100) -> list:
     """Search for companies by matching email domain."""
     email = "@" + email_domain
     payload = json.dumps({
@@ -230,7 +276,7 @@ def search_cvr_by_email_domain(email_domain: str) -> list:
                 "Vrvirksomhed.elektroniskPost.kontaktoplysning": email
             }
         },
-        "size": 100  # Adjust the size as needed
+        "size": limit
     })
     headers = {
         'Authorization': 'Basic ' + APITOKEN,
@@ -249,7 +295,7 @@ def search_cvr_by_email_domain(email_domain: str) -> list:
     return companies
 
 
-def search_cvr_by_phone(phone_number: str) -> list:
+def search_cvr_by_phone(phone_number: str, limit: int = 100) -> list:
     """Locate companies by phone number."""
     payload = json.dumps({
         "_source": ["*"],
@@ -258,7 +304,7 @@ def search_cvr_by_phone(phone_number: str) -> list:
                 "Vrvirksomhed.telefonNummer.kontaktoplysning": phone_number
             }
         },
-        "size": 100  # Adjust the size as needed
+        "size": limit
     })
     headers = {
         'Authorization': 'Basic ' + APITOKEN,
@@ -277,7 +323,7 @@ def search_cvr_by_phone(phone_number: str) -> list:
     return companies
 
 
-def search_cvr_by_address(address: str, postal_code: Optional[str] = None) -> list:
+def search_cvr_by_address(address: str, postal_code: Optional[str] = None, limit: int = 100) -> list:
     """Return companies registered on the provided street address."""
     cleaned_address = address.strip()
     if not cleaned_address:
@@ -315,6 +361,7 @@ def search_cvr_by_address(address: str, postal_code: Optional[str] = None) -> li
     queries.append(_build_fuzzy_address_query(cleaned_address, filters))
 
     for query in queries:
+        query['size'] = limit
         payload = json.dumps(query)
         response = requests.request("POST", url, headers=headers, data=payload, timeout=10)
 
