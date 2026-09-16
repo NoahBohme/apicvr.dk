@@ -136,6 +136,21 @@
             color: #2c3e50;
         }
 
+        .info-meta {
+            font-size: 0.85em;
+            color: #78909c;
+        }
+
+        .info-meta.pct {
+            color: #2c3e50;
+        }
+
+        .relation-empty {
+            padding: 18px 30px;
+            font-size: 0.9em;
+            color: #90a4ae;
+        }
+
         .api-section {
             background: white;
             padding: 30px;
@@ -327,9 +342,94 @@
                 </div>
             </div>
 
+            {% set direktion = info.get('direktion') or [] %}
+            {% set fuldt_ansvarlige = info.get('fuldt_ansvarlige') or [] %}
+            {% set ejere = info.get('ejere') or [] %}
+            {% if direktion or fuldt_ansvarlige or ejere %}
+            <div class="cards-grid">
+                {% if direktion %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Direktion</h2>
+                    </div>
+                    <div class="card-body">
+                        {% for d in direktion %}
+                        <div class="info-item">
+                            <span class="info-label">{{ d['role'] }}</span>
+                            <span class="info-value">{{ d['name'] }}</span>
+                            {% if d['address'] %}
+                            <span class="info-meta">{{ d['address'] }}{% if d['zipcode'] %}, {{ d['zipcode'] }} {{ d['city'] or '' }}{% endif %}</span>
+                            {% elif d['country'] %}
+                            <span class="info-meta">{{ d['country'] }}</span>
+                            {% endif %}
+                            {% if d['startdate'] %}
+                            <span class="info-meta">Startdato: {{ d['startdate'] }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if fuldt_ansvarlige %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Fuldt ansvarlige deltagere</h2>
+                    </div>
+                    <div class="card-body">
+                        {% for d in fuldt_ansvarlige %}
+                        <div class="info-item">
+                            <span class="info-value">{{ d['name'] }}</span>
+                            {% if d['address'] %}
+                            <span class="info-meta">{{ d['address'] }}{% if d['zipcode'] %}, {{ d['zipcode'] }} {{ d['city'] or '' }}{% endif %}</span>
+                            {% elif d['country'] %}
+                            <span class="info-meta">{{ d['country'] }}</span>
+                            {% endif %}
+                            {% if d['startdate'] %}
+                            <span class="info-meta">Startdato: {{ d['startdate'] }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if ejere %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Legale ejere</h2>
+                    </div>
+                    <div class="card-body">
+                        {% for e in ejere %}
+                        <div class="info-item">
+                            <span class="info-value">{{ e['name'] }}</span>
+                            {% if e['ownership_range'] %}
+                            <span class="info-meta pct">Ejerandel: {{ e['ownership_range'] }}</span>
+                            {% endif %}
+                            {% if e['voting_rights_range'] %}
+                            <span class="info-meta pct">Stemmerettigheder: {{ e['voting_rights_range'] }}</span>
+                            {% endif %}
+                            {% if e['address'] %}
+                            <span class="info-meta">{{ e['address'] }}{% if e['zipcode'] %}, {{ e['zipcode'] }} {{ e['city'] or '' }}{% endif %}</span>
+                            {% elif e['country'] %}
+                            <span class="info-meta">{{ e['country'] }}</span>
+                            {% endif %}
+                            {% if e['startdate'] %}
+                            <span class="info-meta">Ændringsdato: {{ e['startdate'] }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <div class="api-section">
-                <h3>API Endpoint</h3>
+                <h3>API Endpoints</h3>
                 <a href="https://apicvr.dk/api/v1/{{ info['vat'] }}" class="api-link">https://apicvr.dk/api/v1/{{ info['vat'] }}</a>
+                <br><br>
+                <a href="https://apicvr.dk/api/v1/{{ info['vat'] }}/direktion-og-ansvarlig" class="api-link">https://apicvr.dk/api/v1/{{ info['vat'] }}/direktion-og-ansvarlig</a>
             </div>
         {% endif %}
     </div>

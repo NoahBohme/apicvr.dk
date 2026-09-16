@@ -12,39 +12,68 @@
     <link rel="alternate" hreflang="en" href="{{ base_url }}/en/">
     <link rel="alternate" hreflang="x-default" href="{{ base_url }}/">
 
-    <meta property="og:title" content="CVR-API - Free Open Source API for Danish Company Lookups">
-    <meta property="og:description" content="The best free API for looking up Danish companies in the Central Business Register. Open source, fast and reliable. Includes MCP server for AI assistants.">
+    <meta property="og:site_name" content="APICVR.dk">
+    <meta property="og:title" content="CVR-API — Free open source API for Danish company lookups">
+    <meta property="og:description" content="The best free API for looking up Danish companies in the Central Business Register. Open source, fast and reliable. Includes an MCP server for AI assistants.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ base_url }}/en/">
     <meta property="og:locale" content="en_US">
     <meta property="og:locale:alternate" content="da_DK">
 
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="CVR-API - Free Open Source API for Danish Company Lookups">
+    <meta name="twitter:title" content="CVR-API — Free open source API for Danish company lookups">
     <meta name="twitter:description" content="Free REST API and MCP server for looking up Danish companies in the Central Business Register (CVR).">
 
-    <title>CVR-API - Free Open Source API for Danish Company Lookups</title>
+    <meta name="theme-color" content="#2c3e50">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%232c3e50%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20font-family%3D%22Inter%2C%20system-ui%2C%20sans-serif%22%20font-size%3D%2226%22%20font-weight%3D%22700%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3ECVR%3C%2Ftext%3E%3C%2Fsvg%3E">
+
+    <title>CVR-API — Free open source API for Danish company lookups</title>
 
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
+      "@type": "WebSite",
+      "name": "APICVR.dk",
+      "url": "{{ base_url }}/en/",
+      "inLanguage": "en-US",
+      "description": "Free open source API for looking up Danish companies in the Central Business Register (CVR).",
+      "publisher": {"@type": "Organization", "name": "APICVR.dk", "url": "{{ base_url }}/"},
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {"@type": "EntryPoint", "urlTemplate": "{{ base_url }}/da/search/?q={search_term_string}"},
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "APICVR.dk",
+      "url": "{{ base_url }}/",
+      "logo": "{{ base_url }}/favicon.svg",
+      "sameAs": ["https://github.com/NoahBohme/apicvr.dk"],
+      "founder": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "noah@noahbohme.com",
+        "contactType": "customer support",
+        "availableLanguage": ["Danish", "English"]
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
       "name": "CVR-API",
-      "url": "https://apicvr.dk",
-      "description": "Free open source REST API and MCP server for looking up Danish companies in the Central Business Register (CVR). Search companies by name, CVR number, email, phone, and address.",
+      "url": "{{ base_url }}/",
+      "description": "Free open source REST API and MCP server for looking up Danish companies in the Central Business Register (CVR). Search by name, CVR number, email, phone, and address.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "All",
       "isAccessibleForFree": true,
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "DKK"
-      },
-      "author": {
-        "@type": "Person",
-        "name": "Noah Böhme",
-        "url": "https://noahbohme.com"
-      },
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "DKK"},
+      "author": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
       "license": "https://raw.githubusercontent.com/NoahBohme/apicvr.dk/master/LICENSE",
       "inLanguage": ["da", "en"]
     }

@@ -11,13 +11,22 @@
     <link rel="alternate" hreflang="da" href="{{ base_url }}/da/mcp">
     <link rel="alternate" hreflang="en" href="{{ base_url }}/en/mcp">
 
-    <meta property="og:title" content="CVR MCP Server - Giv din AI adgang til CVR-data">
+    <meta property="og:site_name" content="APICVR.dk">
+    <meta property="og:title" content="CVR MCP Server — Giv din AI adgang til CVR-data">
     <meta property="og:description" content="Tilslut Claude, ChatGPT og andre AI-assistenter til CVR-registret via MCP. Gratis og open source.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ base_url }}/da/mcp">
     <meta property="og:locale" content="da_DK">
+    <meta property="og:locale:alternate" content="en_US">
 
-    <title>CVR MCP Server - Giv din AI adgang til CVR-data</title>
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="CVR MCP Server — Giv din AI adgang til CVR-data">
+    <meta name="twitter:description" content="Tilslut Claude, ChatGPT og andre AI-assistenter til CVR-registret via MCP.">
+
+    <meta name="theme-color" content="#2c3e50">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%232c3e50%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20font-family%3D%22Inter%2C%20system-ui%2C%20sans-serif%22%20font-size%3D%2226%22%20font-weight%3D%22700%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3ECVR%3C%2Ftext%3E%3C%2Fsvg%3E">
+
+    <title>CVR MCP Server — Giv din AI adgang til CVR-data</title>
 
     <script type="application/ld+json">
     {
@@ -27,12 +36,51 @@
       "url": "https://mcp.apicvr.dk/mcp",
       "description": "MCP-server der giver AI-assistenter direkte adgang til Det Centrale Virksomhedsregister. Understøtter Claude, ChatGPT og alle MCP-kompatible klienter.",
       "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "All",
       "isAccessibleForFree": true,
-      "author": {
-        "@type": "Person",
-        "name": "Noah Böhme",
-        "url": "https://noahbohme.com"
-      }
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "DKK"},
+      "author": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
+      "inLanguage": ["da", "en"]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Hvad er MCP?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Model Context Protocol (MCP) er en åben standard der gør det muligt for AI-assistenter at forbinde til eksterne datakilder og tjenester i realtid. I stedet for at AI'en kun kender til data fra sin træning, kan den aktivt hente opdaterede oplysninger."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Hvilke AI-assistenter understøtter MCP?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Alle MCP-kompatible klienter kan bruge CVR MCP-serveren, herunder Claude Desktop, Claude Code, ChatGPT (via MCP-integration), Cursor, Windsurf og andre AI-værktøjer der understøtter Model Context Protocol."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Er CVR MCP-serveren gratis?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja. CVR MCP-serveren er 100 % gratis og open source. Kildekoden er tilgængelig på GitHub under MIT-licens."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Hvilke funktioner har CVR MCP-serveren?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Serveren eksponerer 7 funktioner: opslag på CVR-nummer, søgning på navn (præfiks og fuzzy), email, email-domæne, telefon og adresse. Den henter data direkte fra Det Centrale Virksomhedsregister via apicvr.dk."
+          }
+        }
+      ]
     }
     </script>
     <style>

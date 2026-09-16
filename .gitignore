@@ -4,3 +4,9 @@ __pycache__
 .DS_Store
 frontend/.DS_Store
 frontend/templates/swagger/.DS_Store
+
+# Local dev symlink used to satisfy `from app.modules.*` outside Docker
+/app
+
+# Runtime SQLite data
+*.db
