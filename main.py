@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import NoMatchFound
 
@@ -67,7 +68,8 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         )
         raw_referer = request.headers.get("referer") or request.headers.get("referrer")
         referer = raw_referer[:500] if raw_referer else None
-        log_request(
+        await run_in_threadpool(
+            log_request,
             request.method,
             request.url.path,
             response.status_code,
@@ -430,7 +432,7 @@ async def kapitalindsigt_page(request: Request, cvrNumber: str):
 
 @app.get("/stats", include_in_schema=False)
 async def stats_dashboard(request: Request, _: bool = Depends(verify_stats_auth)):
-    return templates.TemplateResponse("/stats.html", {"request": request, "stats": get_stats()})
+    return templates.TemplateResponse("/stats.html", {"request": request, "stats": await run_in_threadpool(get_stats)})
 
 
 # --- SEO / crawler files ---------------------------------------------------

@@ -55,11 +55,21 @@ def get_stats() -> dict:
     now = datetime.now(timezone.utc)
     today = now.strftime("%Y-%m-%d")
     week_start = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
+    tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
     this_month = now.strftime("%Y-%m")
     if now.month == 1:
         last_month = f"{now.year - 1}-12"
     else:
         last_month = f"{now.year}-{now.month - 1:02d}"
+    if now.month == 12:
+        next_month = f"{now.year + 1}-01"
+    else:
+        next_month = f"{now.year}-{now.month + 1:02d}"
+    # Plain range bounds so the WHERE clauses can use idx_timestamp;
+    # wrapping the column in date()/strftime() forces a full table scan.
+    month_start = f"{this_month}-01"
+    next_month_start = f"{next_month}-01"
+    last_month_start = f"{last_month}-01"
 
     with _get_conn() as conn:
 
@@ -68,29 +78,29 @@ def get_stats() -> dict:
                 f"SELECT COUNT(*) FROM request_log WHERE {where}", params
             ).fetchone()[0]
 
-        today_count = count("date(timestamp) = ?", (today,))
-        week_count = count("date(timestamp) >= ?", (week_start,))
-        this_month_count = count("strftime('%Y-%m', timestamp) = ?", (this_month,))
-        last_month_count = count("strftime('%Y-%m', timestamp) = ?", (last_month,))
+        today_count = count("timestamp >= ? AND timestamp < ?", (today, tomorrow))
+        week_count = count("timestamp >= ?", (week_start,))
+        this_month_count = count("timestamp >= ? AND timestamp < ?", (month_start, next_month_start))
+        last_month_count = count("timestamp >= ? AND timestamp < ?", (last_month_start, month_start))
 
         avg_response = conn.execute(
-            "SELECT AVG(response_time_ms) FROM request_log WHERE date(timestamp) = ?",
-            (today,),
+            "SELECT AVG(response_time_ms) FROM request_log WHERE timestamp >= ? AND timestamp < ?",
+            (today, tomorrow),
         ).fetchone()[0]
 
         top_endpoints_today = conn.execute(
             """
             SELECT path, COUNT(*) as count FROM request_log
-            WHERE date(timestamp) = ?
+            WHERE timestamp >= ? AND timestamp < ?
             GROUP BY path ORDER BY count DESC LIMIT 15
             """,
-            (today,),
+            (today, tomorrow),
         ).fetchall()
 
         top_endpoints_week = conn.execute(
             """
             SELECT path, COUNT(*) as count FROM request_log
-            WHERE date(timestamp) >= ?
+            WHERE timestamp >= ?
             GROUP BY path ORDER BY count DESC LIMIT 15
             """,
             (week_start,),
@@ -99,25 +109,25 @@ def get_stats() -> dict:
         top_endpoints_month = conn.execute(
             """
             SELECT path, COUNT(*) as count FROM request_log
-            WHERE strftime('%Y-%m', timestamp) = ?
+            WHERE timestamp >= ? AND timestamp < ?
             GROUP BY path ORDER BY count DESC LIMIT 15
             """,
-            (this_month,),
+            (month_start, next_month_start),
         ).fetchall()
 
         hourly_today = conn.execute(
             """
             SELECT strftime('%H', timestamp) as hour, COUNT(*) as count
-            FROM request_log WHERE date(timestamp) = ?
+            FROM request_log WHERE timestamp >= ? AND timestamp < ?
             GROUP BY hour ORDER BY hour
             """,
-            (today,),
+            (today, tomorrow),
         ).fetchall()
 
         daily_week = conn.execute(
             """
             SELECT date(timestamp) as day, COUNT(*) as count
-            FROM request_log WHERE date(timestamp) >= ?
+            FROM request_log WHERE timestamp >= ?
             GROUP BY day ORDER BY day
             """,
             (week_start,),
@@ -126,25 +136,25 @@ def get_stats() -> dict:
         daily_month = conn.execute(
             """
             SELECT date(timestamp) as day, COUNT(*) as count
-            FROM request_log WHERE strftime('%Y-%m', timestamp) = ?
+            FROM request_log WHERE timestamp >= ? AND timestamp < ?
             GROUP BY day ORDER BY day
             """,
-            (this_month,),
+            (month_start, next_month_start),
         ).fetchall()
 
         top_ips_today = conn.execute(
             """
             SELECT ip, COUNT(*) as count FROM request_log
-            WHERE date(timestamp) = ? AND ip IS NOT NULL
+            WHERE timestamp >= ? AND timestamp < ? AND ip IS NOT NULL
             GROUP BY ip ORDER BY count DESC LIMIT 15
             """,
-            (today,),
+            (today, tomorrow),
         ).fetchall()
 
         top_ips_week = conn.execute(
             """
             SELECT ip, COUNT(*) as count FROM request_log
-            WHERE date(timestamp) >= ? AND ip IS NOT NULL
+            WHERE timestamp >= ? AND ip IS NOT NULL
             GROUP BY ip ORDER BY count DESC LIMIT 15
             """,
             (week_start,),
@@ -153,25 +163,25 @@ def get_stats() -> dict:
         top_ips_month = conn.execute(
             """
             SELECT ip, COUNT(*) as count FROM request_log
-            WHERE strftime('%Y-%m', timestamp) = ? AND ip IS NOT NULL
+            WHERE timestamp >= ? AND timestamp < ? AND ip IS NOT NULL
             GROUP BY ip ORDER BY count DESC LIMIT 15
             """,
-            (this_month,),
+            (month_start, next_month_start),
         ).fetchall()
 
         top_referers_today = conn.execute(
             """
             SELECT referer, COUNT(*) as count FROM request_log
-            WHERE date(timestamp) = ? AND referer IS NOT NULL
+            WHERE timestamp >= ? AND timestamp < ? AND referer IS NOT NULL
             GROUP BY referer ORDER BY count DESC LIMIT 15
             """,
-            (today,),
+            (today, tomorrow),
         ).fetchall()
 
         top_referers_week = conn.execute(
             """
             SELECT referer, COUNT(*) as count FROM request_log
-            WHERE date(timestamp) >= ? AND referer IS NOT NULL
+            WHERE timestamp >= ? AND referer IS NOT NULL
             GROUP BY referer ORDER BY count DESC LIMIT 15
             """,
             (week_start,),
@@ -180,10 +190,10 @@ def get_stats() -> dict:
         top_referers_month = conn.execute(
             """
             SELECT referer, COUNT(*) as count FROM request_log
-            WHERE strftime('%Y-%m', timestamp) = ? AND referer IS NOT NULL
+            WHERE timestamp >= ? AND timestamp < ? AND referer IS NOT NULL
             GROUP BY referer ORDER BY count DESC LIMIT 15
             """,
-            (this_month,),
+            (month_start, next_month_start),
         ).fetchall()
 
         return {
