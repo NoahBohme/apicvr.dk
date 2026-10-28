@@ -1,0 +1,49 @@
+{% extends "_layout.html" %}
+
+{% block head %}
+{% include "_seo_head.html" %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "CollectionPage",
+          "name": {{ ui.hub_h1|tojson }},
+          "description": {{ ui.hub_description|tojson }},
+          "url": "{{ site_url }}{{ alt_urls[lang] }}",
+          "inLanguage": "{{ lang }}",
+          "hasPart": [{% for p in guide_pages %}{"@type": "TechArticle", "headline": {{ p[lang].h1|tojson }}, "url": "{{ site_url }}{{ guide_url(p, lang) }}"}{% if not loop.last %},{% endif %}{% endfor %}]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": {{ ui.crumb_home|tojson }}, "item": "{{ site_url }}{{ ui.home_path }}"},
+            {"@type": "ListItem", "position": 2, "name": "Guides", "item": "{{ site_url }}{{ alt_urls[lang] }}"}
+          ]
+        }
+      ]
+    }
+    </script>
+{% endblock %}
+
+{% block content %}
+    <header class="page-hero">
+        <div class="wrap">
+            <nav class="crumbs" aria-label="Breadcrumb"><a href="{{ ui.home_path }}">{{ ui.crumb_home }}</a> / <span>Guides</span></nav>
+            <h1>{{ ui.hub_h1 }}</h1>
+            <p class="lead">{{ ui.hub_lead }}</p>
+        </div>
+    </header>
+    <main class="wrap">
+        {% for family, labels in guide_families.items() %}
+        <section class="block" aria-labelledby="fam-{{ family }}">
+            <h2 id="fam-{{ family }}">{{ labels[lang] }}</h2>
+            <div class="guide-grid">
+                {% for p in guide_pages if p.family == family %}
+                <a class="guide-card" href="{{ guide_url(p, lang) }}"><strong>{{ p[lang].h1 }}</strong><span>{{ p[lang].description|truncate(110) }}</span></a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </main>
+{% endblock %}

@@ -1,9 +1,15 @@
 import sqlite3
 import os
+import threading
+import time
 from datetime import datetime, timezone, timedelta
 from contextlib import contextmanager
 
 DB_PATH = os.getenv("STATS_DB_PATH", "stats.db")
+
+_PUBLIC_STATS_TTL = 600  # seconds
+_public_stats_cache = {"at": 0.0, "data": None}
+_public_stats_lock = threading.Lock()
 
 
 def init_db():
@@ -231,3 +237,46 @@ def get_stats() -> dict:
             "top_referers_week": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_week],
             "top_referers_month": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_month],
         }
+
+
+def get_public_stats():
+    """Aggregate counters safe to show on the public homepage.
+
+    Cached for _PUBLIC_STATS_TTL seconds and limited to index-only lookups,
+    so it's cheap even on a multi-GB request_log. Returns None if the stats
+    DB is unavailable; callers should hide the stats section in that case.
+    """
+    cache = _public_stats_cache
+    if cache["data"] is not None and time.monotonic() - cache["at"] < _PUBLIC_STATS_TTL:
+        return cache["data"]
+    # Only one thread refreshes; the others serve the stale value meanwhile.
+    if not _public_stats_lock.acquire(blocking=cache["data"] is None):
+        return cache["data"]
+    try:
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        month_ago = (now - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+        with _get_conn() as conn:
+            # Separate queries: SQLite only applies its min/max index shortcut
+            # when the aggregate stands alone.
+            total = conn.execute("SELECT MAX(id) FROM request_log").fetchone()[0]
+            first_ts = conn.execute("SELECT MIN(timestamp) FROM request_log").fetchone()[0]
+            last_30d = conn.execute(
+                "SELECT COUNT(*) FROM request_log WHERE timestamp >= ?", (month_ago,)
+            ).fetchone()[0]
+            today_count = conn.execute(
+                "SELECT COUNT(*) FROM request_log WHERE timestamp >= ?", (today,)
+            ).fetchone()[0]
+        cache["data"] = {
+            "total": total or 0,
+            "since": first_ts[:10] if first_ts else None,
+            "last_30d": last_30d,
+            "per_day": round(last_30d / 30),
+            "today": today_count,
+        }
+        cache["at"] = time.monotonic()
+    except sqlite3.Error:
+        pass
+    finally:
+        _public_stats_lock.release()
+    return cache["data"]

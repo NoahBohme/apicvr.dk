@@ -1,520 +1,381 @@
-<!DOCTYPE html>
-<html lang="da">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Gratis open source CVR-API til virksomhedsopslag i Det Centrale Virksomhedsregister. Hurtig, pålidelig og let at integrere. Hent CVR-data via REST API.">
-    <meta name="keywords" content="CVR API, virksomhedsopslag, CVR-register, danske virksomheder, company lookup, REST API, open source API, gratis API, CVR-nummer, virksomhedsdata">
+{% extends "_layout.html" %}
+
+{% block head %}
+    <title>{{ t.title }}</title>
+    <meta name="description" content="{{ t.description }}">
     <meta name="author" content="Noah Böhme">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="{{ base_url }}/">
-    <link rel="alternate" hreflang="da" href="{{ base_url }}/">
-    <link rel="alternate" hreflang="en" href="{{ base_url }}/en/">
-    <link rel="alternate" hreflang="x-default" href="{{ base_url }}/">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+    <link rel="canonical" href="{{ site_url }}{{ t.path }}">
+    <link rel="alternate" hreflang="da" href="{{ site_url }}/">
+    <link rel="alternate" hreflang="en" href="{{ site_url }}/en/">
+    <link rel="alternate" hreflang="x-default" href="{{ site_url }}/">
 
     <meta property="og:site_name" content="APICVR.dk">
-    <meta property="og:title" content="CVR-API — Gratis open source API til CVR-opslag">
-    <meta property="og:description" content="Det bedste gratis API til opslag i Det Centrale Virksomhedsregister. Open source, hurtig og pålidelig.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ base_url }}/">
-    <meta property="og:locale" content="da_DK">
-    <meta property="og:locale:alternate" content="en_US">
+    <meta property="og:title" content="{{ t.og_title }}">
+    <meta property="og:description" content="{{ t.description }}">
+    <meta property="og:url" content="{{ site_url }}{{ t.path }}">
+    <meta property="og:locale" content="{{ t.locale }}">
+    <meta property="og:locale:alternate" content="{{ t.alt_locale }}">
+    <meta property="og:image" content="{{ site_url }}{{ t.og_image }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="{{ t.og_title }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ t.og_title }}">
+    <meta name="twitter:description" content="{{ t.description }}">
+    <meta name="twitter:image" content="{{ site_url }}{{ t.og_image }}">
 
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="CVR-API — Gratis open source API til CVR-opslag">
-    <meta name="twitter:description" content="Gratis REST API til opslag i Det Centrale Virksomhedsregister.">
-
-    <meta name="theme-color" content="#2c3e50">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%232c3e50%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20font-family%3D%22Inter%2C%20system-ui%2C%20sans-serif%22%20font-size%3D%2226%22%20font-weight%3D%22700%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3ECVR%3C%2Ftext%3E%3C%2Fsvg%3E">
-
-    <title>CVR-API — Gratis open source API til virksomhedsopslag i CVR-registret</title>
 
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "APICVR.dk",
-      "url": "{{ base_url }}/",
-      "inLanguage": "da-DK",
-      "description": "Gratis open source API til opslag i Det Centrale Virksomhedsregister (CVR).",
-      "publisher": {"@type": "Organization", "name": "APICVR.dk", "url": "{{ base_url }}/"},
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {"@type": "EntryPoint", "urlTemplate": "{{ base_url }}/da/search/?q={search_term_string}"},
-        "query-input": "required name=search_term_string"
-      }
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "{{ site_url }}/#org",
+          "name": "APICVR.dk",
+          "url": "{{ site_url }}/",
+          "logo": "{{ site_url }}/apple-touch-icon.png",
+          "sameAs": ["https://github.com/NoahBohme/apicvr.dk"],
+          "founder": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "noah@noahbohme.com",
+            "contactType": "customer support",
+            "availableLanguage": ["Danish", "English"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "{{ site_url }}/#website",
+          "name": "APICVR.dk",
+          "alternateName": "CVR-API",
+          "url": "{{ site_url }}/",
+          "inLanguage": ["da-DK", "en"],
+          "publisher": {"@id": "{{ site_url }}/#org"}
+        },
+        {
+          "@type": "WebPage",
+          "@id": "{{ site_url }}{{ t.path }}#webpage",
+          "url": "{{ site_url }}{{ t.path }}",
+          "name": {{ t.title|tojson }},
+          "description": {{ t.description|tojson }},
+          "inLanguage": "{{ t.lang }}",
+          "isPartOf": {"@id": "{{ site_url }}/#website"},
+          "about": {"@id": "{{ site_url }}/#api"},
+          "primaryImageOfPage": "{{ site_url }}{{ t.og_image }}"
+        },
+        {
+          "@type": ["SoftwareApplication", "WebAPI"],
+          "@id": "{{ site_url }}/#api",
+          "name": "CVR-API",
+          "url": "{{ site_url }}/",
+          "description": {{ t.description|tojson }},
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "All",
+          "isAccessibleForFree": true,
+          "offers": {"@type": "Offer", "price": "0", "priceCurrency": "DKK"},
+          "documentation": "{{ site_url }}/docs",
+          "provider": {"@id": "{{ site_url }}/#org"},
+          "license": "https://opensource.org/licenses/MIT",
+          "codeRepository": "https://github.com/NoahBohme/apicvr.dk",
+          "inLanguage": ["da", "en"]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "{{ site_url }}{{ t.path }}#faq",
+          "inLanguage": "{{ t.lang }}",
+          "mainEntity": [
+            {% for q, a in t.faq %}{
+              "@type": "Question",
+              "name": {{ q|tojson }},
+              "acceptedAnswer": {"@type": "Answer", "text": {{ a|striptags|tojson }}}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+          ]
+        }
+      ]
     }
     </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "APICVR.dk",
-      "url": "{{ base_url }}/",
-      "logo": "{{ base_url }}/favicon.svg",
-      "sameAs": ["https://github.com/NoahBohme/apicvr.dk"],
-      "founder": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "email": "noah@noahbohme.com",
-        "contactType": "customer support",
-        "availableLanguage": ["Danish", "English"]
-      }
-    }
-    </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "CVR-API",
-      "url": "{{ base_url }}/",
-      "description": "Gratis open source REST API til opslag i Det Centrale Virksomhedsregister (CVR). Søg danske virksomheder på navn, CVR-nummer, email, telefon og adresse.",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "All",
-      "isAccessibleForFree": true,
-      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "DKK"},
-      "author": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
-      "license": "https://raw.githubusercontent.com/NoahBohme/apicvr.dk/master/LICENSE",
-      "inLanguage": ["da", "en"]
-    }
-    </script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+{% endblock %}
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f8f9fa;
-            min-height: 100vh;
-            padding: 20px;
-            line-height: 1.7;
-            color: #2c3e50;
-        }
+{% block nav_extra %}
+                <a href="#endpoints" class="hide-sm">{{ t.nav_endpoints }}</a>
+                <a href="#faq" class="hide-sm">{{ t.nav_faq }}</a>
+{% endblock %}
 
-        .container { max-width: 1100px; margin: 0 auto; }
-
-        .top-nav {
-            background: white;
-            padding: 16px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-radius: 2px;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #2c3e50;
-        }
-
-        .nav-brand {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: #2c3e50;
-            text-decoration: none;
-            letter-spacing: -0.5px;
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 28px;
-        }
-
-        .nav-links a {
-            color: #546e7a;
-            text-decoration: none;
-            font-size: 0.9em;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover { color: #2c3e50; }
-
-        .lang-toggle {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding-left: 20px;
-            border-left: 1px solid #e0e0e0;
-            margin-left: 4px;
-            font-size: 0.85em;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .lang-toggle a { color: #90a4ae; font-weight: 600; }
-        .lang-toggle a:hover { color: #2c3e50; }
-        .lang-toggle .active { color: #2c3e50; }
-        .lang-toggle span { color: #cfd8dc; }
-
-        .hero {
-            background: white;
-            border-radius: 2px;
-            padding: 80px 60px;
-            margin-bottom: 20px;
-            border-top: 4px solid #2c3e50;
-        }
-
-        h1 {
-            font-size: 3.2em;
-            color: #2c3e50;
-            margin-bottom: 24px;
-            font-weight: 300;
-            letter-spacing: -1px;
-        }
-
-        .subtitle {
-            font-size: 1.25em;
-            color: #546e7a;
-            margin-bottom: 50px;
-            font-weight: 400;
-            max-width: 700px;
-        }
-
-        .cta-section {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            padding: 50px;
-            border-radius: 2px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .cta-section h2 {
-            color: white;
-            font-size: 2em;
-            font-weight: 400;
-            margin-bottom: 20px;
-        }
-
-        .cta-section p { color: #ecf0f1; font-size: 1.1em; margin-bottom: 35px; }
-
-        .cta-buttons {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 18px 42px;
-            font-size: 1.1em;
-            border-radius: 2px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: inline-block;
-            letter-spacing: 0.3px;
-        }
-
-        .btn-primary { background: white; color: #2c3e50; }
-        .btn-primary:hover { background: #ecf0f1; transform: translateY(-2px); }
-
-        .btn-secondary {
-            background: transparent;
-            color: white;
-            border: 2px solid white;
-        }
-
-        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
-
-        .demo-section {
-            background: white;
-            padding: 60px;
-            border-radius: 2px;
-            margin-bottom: 20px;
-        }
-
-        .demo-section h2 {
-            font-size: 1.8em;
-            color: #2c3e50;
-            margin-bottom: 12px;
-            font-weight: 400;
-        }
-
-        .demo-subtitle { color: #546e7a; margin-bottom: 30px; font-size: 0.95em; }
-
-        .search-container { position: relative; max-width: 600px; margin: 0 auto; }
-
-        #searchInput {
-            width: 100%;
-            padding: 18px 24px;
-            font-size: 1em;
-            border: 2px solid #e0e0e0;
-            border-radius: 2px;
-            font-family: inherit;
-            transition: border-color 0.2s ease;
-            background: #fafafa;
-        }
-
-        #searchInput:focus { outline: none; border-color: #2c3e50; background: white; }
-
-        .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 2px solid #2c3e50;
-            border-top: none;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.2s ease;
-            z-index: 1000;
-        }
-
-        .suggestions.active { max-height: 400px; overflow-y: auto; }
-
-        .suggestion-item {
-            padding: 16px 24px;
-            cursor: pointer;
-            transition: background 0.15s ease;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .suggestion-item:last-child { border-bottom: none; }
-        .suggestion-item:hover { background: #f8f9fa; }
-        .suggestion-name { color: #2c3e50; font-weight: 500; margin-bottom: 4px; }
-        .suggestion-details { font-size: 0.85em; color: #78909c; }
-        .suggestion-cvr { color: #546e7a; font-weight: 500; }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1px;
-            background: #e0e0e0;
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .feature {
-            background: white;
-            padding: 35px 30px;
-            transition: background 0.2s ease;
-        }
-
-        .feature:hover { background: #f8f9fa; }
-
-        .feature h3 {
-            color: #2c3e50;
-            margin-bottom: 12px;
-            font-size: 1.1em;
-            font-weight: 500;
-        }
-
-        .feature p { color: #546e7a; font-size: 0.95em; line-height: 1.6; }
-
-        .disclaimer {
-            background: white;
-            border-radius: 2px;
-            padding: 50px 60px;
-            border-left: 4px solid #d32f2f;
-            margin-bottom: 20px;
-        }
-
-        .disclaimer h2 {
-            color: #2c3e50;
-            margin-bottom: 24px;
-            font-size: 1.6em;
-            font-weight: 400;
-        }
-
-        .disclaimer-content { color: #546e7a; line-height: 1.8; font-size: 0.95em; }
-
-        .disclaimer-content ul {
-            margin: 24px 0;
-            padding-left: 24px;
-            list-style: none;
-        }
-
-        .disclaimer-content li {
-            margin: 12px 0;
-            padding-left: 20px;
-            position: relative;
-        }
-
-        .disclaimer-content li:before {
-            content: "—";
-            position: absolute;
-            left: 0;
-            color: #d32f2f;
-        }
-
-        .disclaimer-content strong { color: #2c3e50; font-weight: 500; }
-
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #78909c;
-            font-size: 0.9em;
-            padding: 30px 0;
-        }
-
-        .footer a {
-            color: #2c3e50;
-            text-decoration: none;
-            font-weight: 500;
-            border-bottom: 1px solid #cfd8dc;
-            transition: border-color 0.2s ease;
-        }
-
-        .footer a:hover { border-bottom-color: #2c3e50; }
-
-        @media (max-width: 768px) {
-            body { padding: 12px; }
-            h1 { font-size: 2.2em; }
-            .subtitle { font-size: 1.1em; }
-            .hero, .demo-section, .disclaimer, .cta-section { padding: 40px 24px; }
-            .cta-section h2 { font-size: 1.5em; }
-            .features { grid-template-columns: 1fr; }
-            .btn { padding: 16px 32px; font-size: 1em; }
-            .top-nav { flex-direction: column; gap: 12px; align-items: flex-start; }
-            .nav-links { flex-wrap: wrap; gap: 16px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <nav class="top-nav">
-            <a href="{{ base_url }}/" class="nav-brand">CVR-API</a>
-            <div class="nav-links">
-                <a href="{{ docs_url }}">API Docs</a>
-                <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a>
-                <div class="lang-toggle">
-                    <a href="{{ base_url }}/" class="active">DA</a>
-                    <span>|</span>
-                    <a href="{{ base_url }}/en/">EN</a>
+{% block content %}
+    <header class="hero">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow">{{ t.eyebrow }}</span>
+                <h1>{{ t.h1 }}</h1>
+                <p class="lead">{{ t.lead }}</p>
+                <div class="cta-buttons">
+                    <a href="#try" class="btn btn-primary">{{ t.cta_try }}</a>
+                    <a href="{{ docs_url }}" class="btn btn-ghost">{{ t.cta_docs }}</a>
                 </div>
             </div>
-        </nav>
-
-        <div class="hero">
-            <h1>CVR-API</h1>
-            <p class="subtitle">Gratis open source API til virksomhedsopslag i Det Centrale Virksomhedsregister</p>
-        </div>
-
-        <div class="cta-section">
-            <h2>Kom i gang med CVR-API</h2>
-            <p>Få adgang til omfattende CVR-data via REST API</p>
-            <div class="cta-buttons">
-                <a href="{{ docs_url }}" class="btn btn-primary">Læs Dokumentationen</a>
-                <a href="https://github.com/NoahBohme/apicvr.dk" class="btn btn-secondary">GitHub</a>
+            <div class="terminal" aria-label="Example request and response">
+                <div class="terminal-bar"><i></i><i></i><i></i></div>
+<pre><span class="t-prompt">$</span> curl {{ site_url }}/api/v1/41013583
+<span class="t-dim">{</span>
+  <span class="t-key">"vat"</span>: <span class="t-num">41013583</span>,
+  <span class="t-key">"name"</span>: <span class="t-str">"Tornado Invest ApS"</span>,
+  <span class="t-key">"address"</span>: <span class="t-str">"Stoltenbergsgade 5, 4"</span>,
+  <span class="t-key">"zipcode"</span>: <span class="t-num">1576</span>,
+  <span class="t-key">"city"</span>: <span class="t-str">"København V"</span>,
+  <span class="t-key">"industrydesc"</span>: <span class="t-str">"Ikke-finansielle holdingselskaber"</span>,
+  <span class="t-key">"companydesc"</span>: <span class="t-str">"Anpartsselskab"</span>,
+  <span class="t-key">"status"</span>: <span class="t-str">"NORMAL"</span>,
+  <span class="t-key">"protected"</span>: <span class="t-num">true</span>,
+  <span class="t-key">"direktion"</span>: <span class="t-dim">[ … ]</span>,
+  <span class="t-key">"ejere"</span>: <span class="t-dim">[ … ]</span>,
+  <span class="t-key">"p_units"</span>: <span class="t-dim">[ … ]</span>
+<span class="t-dim">}</span></pre>
             </div>
         </div>
+    </header>
 
-        <div class="demo-section">
-            <h2>Prøv API'et</h2>
-            <p class="demo-subtitle">Søg på virksomhedsnavn eller indtast et CVR-nummer direkte</p>
-            <div class="search-container">
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="Søg virksomhed eller indtast CVR-nummer..."
-                    autocomplete="off"
-                />
-                <div id="suggestions" class="suggestions"></div>
+    <main>
+        {% if stats %}
+        <section class="stats" aria-labelledby="stats-heading">
+            <div class="wrap">
+                <div class="stats-card">
+                    <div class="stats-head">
+                        <h2 id="stats-heading"><span class="live-dot" aria-hidden="true"></span>{{ t.stats_heading }}</h2>
+                        <span class="stats-note">{{ t.stats_note }}</span>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat">
+                            <div class="stat-num" data-count="{{ stats.total }}">{{ stats.total|num(t.lang) }}</div>
+                            <div class="stat-label">{{ t.stat_total }}{% if stats.since %} {{ t.stat_total_since }} {{ stats.since }}{% endif %}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-num" data-count="{{ stats.last_30d }}">{{ stats.last_30d|num(t.lang) }}</div>
+                            <div class="stat-label">{{ t.stat_30d }}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-num" data-count="{{ stats.per_day }}">{{ stats.per_day|num(t.lang) }}</div>
+                            <div class="stat-label">{{ t.stat_per_day }}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-num" data-count="{{ stats.today }}">{{ stats.today|num(t.lang) }}</div>
+                            <div class="stat-label">{{ t.stat_today }}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
+        {% endif %}
 
-        <div class="features">
-            <div class="feature">
-                <h3>Lynhurtig</h3>
-                <p>Få CVR-data på millisekunder med vores optimerede REST API</p>
+        <section class="block" id="try" aria-labelledby="try-heading">
+            <div class="wrap">
+                <h2 id="try-heading">{{ t.try_heading }}</h2>
+                <p class="sub">{{ t.try_sub }}</p>
+                <div class="search-container">
+                    <input type="search" id="searchInput" placeholder="{{ t.try_placeholder }}" autocomplete="off" aria-label="{{ t.try_placeholder }}" aria-controls="suggestions">
+                    <div id="suggestions" class="suggestions" role="listbox"></div>
+                </div>
             </div>
-            <div class="feature">
-                <h3>Open Source</h3>
-                <p>Fuldstændig gratis og transparent kildekode på GitHub</p>
-            </div>
-            <div class="feature">
-                <h3>Pålidelig</h3>
-                <p>Troværdige data direkte fra CVR-registret</p>
-            </div>
-        </div>
+        </section>
 
-        <div class="disclaimer">
-            <h2>Vigtig information om reklamebeskyttelse</h2>
-            <div class="disclaimer-content">
-                <p>Alle brugere af CVR-API skal overholde reglerne om reklamebeskyttelse i henhold til CVR-loven.</p>
-                <p><strong>Virksomheder kan frabede sig reklamehenvendelser.</strong> Som bruger forpligter du dig til:</p>
-                <ul>
-                    <li>At respektere virksomheders ønske om reklamebeskyttelse</li>
-                    <li>At oplysninger om reklamebeskyttede virksomheder eller p-enheder ikke må bruges til direkte markedsføring, herunder telefonopkald, målrettede postudsendelser og lignende</li>
-                    <li>At markere tydeligt ved videregivelse til tredjemand, at en virksomhed eller p-enhed er beskyttet</li>
+        <section class="block" aria-labelledby="code-heading">
+            <div class="wrap">
+                <h2 id="code-heading">{{ t.code_heading }}</h2>
+                <p class="sub">{{ t.code_sub }}</p>
+                <div class="tabs" role="tablist">
+                    <button class="tab" role="tab" aria-selected="true" aria-controls="code-curl" id="tab-curl">cURL</button>
+                    <button class="tab" role="tab" aria-selected="false" aria-controls="code-python" id="tab-python">Python</button>
+                    <button class="tab" role="tab" aria-selected="false" aria-controls="code-js" id="tab-js">JavaScript</button>
+                    <button class="tab" role="tab" aria-selected="false" aria-controls="code-php" id="tab-php">PHP</button>
+                </div>
+                <div class="code-panel" role="tabpanel" id="code-curl" aria-labelledby="tab-curl"><pre>curl {{ site_url }}/api/v1/41013583
+
+curl "{{ site_url }}/api/v1/search/fuzzy/novo%20nordisk"</pre></div>
+                <div class="code-panel" role="tabpanel" id="code-python" aria-labelledby="tab-python" hidden><pre>import requests
+
+company = requests.get("{{ site_url }}/api/v1/41013583").json()
+print(company["name"], company["city"])
+
+for owner in company["ejere"]:
+    print(owner["name"], owner["ownership_range"])</pre></div>
+                <div class="code-panel" role="tabpanel" id="code-js" aria-labelledby="tab-js" hidden><pre>const res = await fetch("{{ site_url }}/api/v1/41013583");
+const company = await res.json();
+
+console.log(company.name, company.city);</pre></div>
+                <div class="code-panel" role="tabpanel" id="code-php" aria-labelledby="tab-php" hidden><pre>$company = json_decode(
+    file_get_contents("{{ site_url }}/api/v1/41013583"),
+    true
+);
+
+echo $company["name"] . ", " . $company["city"];</pre></div>
+            </div>
+        </section>
+
+        <section class="block" id="endpoints" aria-labelledby="endpoints-heading">
+            <div class="wrap">
+                <h2 id="endpoints-heading">{{ t.endpoints_heading }}</h2>
+                <div class="panel">
+                    <table class="endpoints">
+                        {% for path, da, en in endpoints %}
+                        <tr>
+                            <td><span class="verb">GET</span><span class="path">{{ path }}</span></td>
+                            <td class="desc">{{ da if t.lang == 'da' else en }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                <p class="endpoints-foot">{{ t.endpoints_sub }} <a href="{{ docs_url }}">{{ t.endpoints_link }}</a>.</p>
+            </div>
+        </section>
+
+        <section class="block" aria-labelledby="features-heading">
+            <div class="wrap">
+                <h2 id="features-heading">{{ t.features_heading }}</h2>
+                <div class="features" style="margin-top: 24px;">
+                    {% for title, body in t.features %}
+                    <div class="feature">
+                        <h3>{{ title }}</h3>
+                        <p>{{ body }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <h3 style="margin-top: 40px; font-size: 1.25em;">{{ t.usecases_heading }}</h3>
+                <ul class="usecases">
+                    {% for item in t.usecases %}<li>{{ item }}</li>{% endfor %}
                 </ul>
-                <p><strong>Disse forpligtelser følger af CVR-lovens § 19 og § 22.</strong> Overtrædelse af disse regler kan medføre juridiske konsekvenser.</p>
-                <p><strong>Referencebrug:</strong> Ved brug af CVR-API accepterer du, at vi kan identificere din organisation som bruger af denne API — baseret på det henvisende domæne i vores analyse — og anvende dit navn eller logo som reference på denne hjemmeside og i relaterede markedsføringsmaterialer. Ønsker du at framelde dig, er du velkommen til at kontakte os.</p>
             </div>
-        </div>
+        </section>
 
-        <div class="footer">
-            <p>Udviklet af <a href="https://noahbohme.com">Noah Böhme</a> · Open source projekt · <a href="https://github.com/NoahBohme/apicvr.dk">Bidrag på GitHub</a></p>
-        </div>
-    </div>
+        <section class="block" id="guides" aria-labelledby="guides-heading">
+            <div class="wrap">
+                <h2 id="guides-heading">{{ ui.home_guides_heading }}</h2>
+                <p class="sub">{{ ui.home_guides_sub }}</p>
+                <div class="guide-grid">
+                    {% for p in guide_pages if p.family in ("language", "integration") %}
+                    <a class="guide-card" href="{{ guide_url(p, lang) }}"><strong>{{ p[lang].h1 }}</strong><span>{{ p[lang].description|truncate(90) }}</span></a>
+                    {% endfor %}
+                </div>
+                <p class="endpoints-foot"><a href="{{ ui.guides_path }}">{{ ui.home_guides_all }} →</a></p>
+            </div>
+        </section>
 
+        <section class="block" id="faq" aria-labelledby="faq-heading">
+            <div class="wrap">
+                <h2 id="faq-heading" style="margin-bottom: 24px;">{{ t.faq_heading }}</h2>
+                <div class="panel faq">
+                    {% for q, a in t.faq %}
+                    <details{% if loop.first %} open{% endif %}>
+                        <summary>{{ q }}</summary>
+                        <p>{{ a|safe }}</p>
+                    </details>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="block" aria-labelledby="disclaimer-heading">
+            <div class="wrap">
+                <div class="disclaimer">
+                    <h2 id="disclaimer-heading">{{ t.disclaimer_heading }}</h2>
+                    {{ t.disclaimer_html|safe }}
+                </div>
+            </div>
+        </section>
+    </main>
+{% endblock %}
+
+{% block scripts %}
     <script>
-        const BASE_URL = "{{ base_url }}";
+        const COMPANY_PATH = {{ t.company_path|tojson }};
         const searchInput = document.getElementById('searchInput');
-        const suggestionsContainer = document.getElementById('suggestions');
+        const suggestions = document.getElementById('suggestions');
         let debounceTimer;
+        let lastQuery = '';
 
-        searchInput.addEventListener('input', function(e) {
+        function hideSuggestions() {
+            suggestions.classList.remove('active');
+            suggestions.replaceChildren();
+        }
+
+        searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             clearTimeout(debounceTimer);
-
-            if (query.length === 0) {
-                suggestionsContainer.classList.remove('active');
-                suggestionsContainer.innerHTML = '';
-                return;
-            }
-
             if (/^\d{8}$/.test(query)) {
-                window.location.href = `${BASE_URL}/da/virksomhed/${query}`;
+                window.location.href = COMPANY_PATH + query;
                 return;
             }
-
-            if (query.length < 2) {
-                suggestionsContainer.classList.remove('active');
-                suggestionsContainer.innerHTML = '';
-                return;
-            }
-
+            if (query.length < 2) return hideSuggestions();
             debounceTimer = setTimeout(() => fetchCompanies(query), 300);
         });
 
         async function fetchCompanies(query) {
+            lastQuery = query;
             try {
-                const response = await fetch(`${BASE_URL}/api/v1/fuzzy_search/company/${encodeURIComponent(query)}`);
-                const companies = await response.json();
-                displaySuggestions(companies.slice(0, 5));
-            } catch (error) {
-                suggestionsContainer.classList.remove('active');
+                const res = await fetch('/api/v1/search/fuzzy/' + encodeURIComponent(query));
+                const companies = await res.json();
+                if (query !== lastQuery) return;
+                render(Array.isArray(companies) ? companies.slice(0, 6) : []);
+            } catch (err) {
+                hideSuggestions();
             }
         }
 
-        function displaySuggestions(companies) {
-            if (companies.length === 0) {
-                suggestionsContainer.classList.remove('active');
-                suggestionsContainer.innerHTML = '';
-                return;
-            }
-
-            suggestionsContainer.innerHTML = companies.map(company => `
-                <div class="suggestion-item" onclick="goToCompany(${company.cvr_number})">
-                    <div class="suggestion-name">${company.name}</div>
-                    <div class="suggestion-details">
-                        <span class="suggestion-cvr">CVR: ${company.cvr_number}</span> · ${company.industrytext}
-                    </div>
-                </div>
-            `).join('');
-
-            suggestionsContainer.classList.add('active');
+        function render(companies) {
+            if (!companies.length) return hideSuggestions();
+            suggestions.replaceChildren(...companies.map((c) => {
+                const item = document.createElement('a');
+                item.className = 'suggestion-item';
+                item.href = COMPANY_PATH + c.cvr_number;
+                item.setAttribute('role', 'option');
+                const name = document.createElement('div');
+                name.className = 'suggestion-name';
+                name.textContent = c.name;
+                const details = document.createElement('div');
+                details.className = 'suggestion-details';
+                details.textContent = 'CVR ' + c.cvr_number + (c.industrytext ? ' · ' + c.industrytext : '');
+                item.append(name, details);
+                return item;
+            }));
+            suggestions.classList.add('active');
         }
 
-        function goToCompany(cvr) {
-            window.location.href = `${BASE_URL}/da/virksomhed/${cvr}`;
-        }
-
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.classList.remove('active');
-            }
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) hideSuggestions();
         });
+
+        // Code tabs
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach((tab) => tab.addEventListener('click', () => {
+            tabs.forEach((t) => {
+                const selected = t === tab;
+                t.setAttribute('aria-selected', selected);
+                document.getElementById(t.getAttribute('aria-controls')).hidden = !selected;
+            });
+        }));
+
+        // Count the stats up from zero the first time they scroll into view.
+        const statNums = document.querySelectorAll('.stat-num[data-count]');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (statNums.length && !reduceMotion && 'IntersectionObserver' in window) {
+            const fmt = new Intl.NumberFormat({{ ('da-DK' if t.lang == 'da' else 'en-US')|tojson }});
+            const observer = new IntersectionObserver((entries) => {
+                if (!entries.some((e) => e.isIntersecting)) return;
+                observer.disconnect();
+                const start = performance.now();
+                const duration = 1200;
+                (function tick(now) {
+                    const p = Math.min(1, (now - start) / duration);
+                    const eased = 1 - Math.pow(1 - p, 3);
+                    statNums.forEach((el) => {
+                        el.textContent = fmt.format(Math.round(Number(el.dataset.count) * eased));
+                    });
+                    if (p < 1) requestAnimationFrame(tick);
+                })(start);
+            }, { threshold: 0.4 });
+            observer.observe(statNums[0]);
+        }
     </script>
-</body>
-</html>
+{% endblock %}

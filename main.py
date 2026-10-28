@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -32,10 +32,18 @@ from apis.searchcvr import (
     search_cvr_combined,
 )
 from app.modules.kapitalsog import show_capital_result
-from app.modules.stats import get_stats, init_db, log_request
+from app.modules import guides
+from app.modules.homepage_content import CONTENT as HOMEPAGE_CONTENT, ENDPOINTS as HOMEPAGE_ENDPOINTS
+from app.modules.site_ui import UI
+from app.modules.stats import get_public_stats, get_stats, init_db, log_request
 
 
 init_db()
+
+# Public origin for canonical/hreflang/OG URLs. Behind the proxy the app
+# sees plain http, so request.base_url can't be trusted for SEO tags.
+SITE_URL = os.getenv("SITE_URL", "https://apicvr.dk").rstrip("/")
+STATIC_DIR = os.path.join("frontend", "static")
 
 security = HTTPBasic()
 
@@ -147,6 +155,45 @@ app = FastAPI(
 
 templates = Jinja2Templates(directory="frontend/templates")
 
+
+def _format_number(value, lang="da"):
+    return f"{value:,}".replace(",", "." if lang == "da" else ",")
+
+
+templates.env.filters["num"] = _format_number
+
+
+def _localize(value):
+    """Swap the {site} placeholder in guide content for the public origin."""
+    if isinstance(value, str):
+        return value.replace("{site}", SITE_URL)
+    if isinstance(value, (list, tuple)):
+        return type(value)(_localize(v) for v in value)
+    if isinstance(value, dict):
+        return {k: _localize(v) for k, v in value.items()}
+    return value
+
+
+GUIDE_PAGES = [_localize(page) for page in guides.PAGES]
+GUIDES_BY_ID = {page["id"]: page for page in GUIDE_PAGES}
+GUIDES_BY_SLUG = {
+    lang: {page["slug"][lang]: page for page in GUIDE_PAGES} for lang in ("da", "en")
+}
+GUIDES_UPDATED = "2026-10-28"
+
+
+def guide_url(page: dict, lang: str) -> str:
+    prefix = "/guides/" if lang == "da" else "/en/guides/"
+    return prefix + page["slug"][lang]
+
+
+templates.env.globals.update(
+    guide_pages=GUIDE_PAGES,
+    guide_families=guides.FAMILIES,
+    guide_url=guide_url,
+    guides_updated=GUIDES_UPDATED,
+)
+
 app.add_middleware(RequestLogMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -183,19 +230,82 @@ def _base_context(request: Request) -> dict:
         docs_url = request.url_for("swagger_ui_html")
     except NoMatchFound:
         docs_url = f"{base_url}/docs"
-    return {"request": request, "base_url": base_url, "docs_url": docs_url}
+    return {"request": request, "base_url": base_url, "docs_url": docs_url, "site_url": SITE_URL}
 
 
 # --- Homepages -------------------------------------------------------------
 
 @app.get("/", include_in_schema=False)
 async def home_da(request: Request):
-    return templates.TemplateResponse("/homepage.html", _base_context(request))
+    return await _render_homepage(request, "da")
 
 
 @app.get("/en/", include_in_schema=False)
 async def home_en(request: Request):
-    return templates.TemplateResponse("/homepage_en.html", _base_context(request))
+    return await _render_homepage(request, "en")
+
+
+async def _render_homepage(request: Request, lang: str):
+    context = _base_context(request)
+    context.update(
+        lang=lang,
+        ui=UI[lang],
+        alt_urls={"da": "/", "en": "/en/"},
+        t=HOMEPAGE_CONTENT[lang],
+        endpoints=HOMEPAGE_ENDPOINTS,
+        stats=await run_in_threadpool(get_public_stats),
+    )
+    return templates.TemplateResponse("/homepage.html", context)
+
+
+def _site_context(request: Request, lang: str, alt_urls: dict) -> dict:
+    context = _base_context(request)
+    context.update(lang=lang, ui=UI[lang], alt_urls=alt_urls)
+    return context
+
+
+# --- Guides (SEO content) --------------------------------------------------
+
+@app.get("/guides/", include_in_schema=False)
+async def guides_index_da(request: Request):
+    return _render_guides_index(request, "da")
+
+
+@app.get("/en/guides/", include_in_schema=False)
+async def guides_index_en(request: Request):
+    return _render_guides_index(request, "en")
+
+
+@app.get("/guides/{slug}", include_in_schema=False)
+async def guide_da(request: Request, slug: str):
+    return _render_guide(request, "da", slug)
+
+
+@app.get("/en/guides/{slug}", include_in_schema=False)
+async def guide_en(request: Request, slug: str):
+    return _render_guide(request, "en", slug)
+
+
+def _render_guides_index(request: Request, lang: str):
+    context = _site_context(request, lang, {"da": "/guides/", "en": "/en/guides/"})
+    seo = UI[lang]
+    context["seo"] = {"title": seo["hub_title"], "description": seo["hub_description"], "h1": seo["hub_h1"]}
+    return templates.TemplateResponse("/guides_index.html", context)
+
+
+def _render_guide(request: Request, lang: str, slug: str):
+    page = GUIDES_BY_SLUG[lang].get(slug)
+    if page is None:
+        raise HTTPException(status_code=404, detail="Guide not found")
+    content = page[lang]
+    context = _site_context(request, lang, {"da": guide_url(page, "da"), "en": guide_url(page, "en")})
+    context.update(
+        page=page,
+        c=content,
+        seo={"title": content["title"], "description": content["description"], "h1": content["h1"], "og_type": "article"},
+        related=[GUIDES_BY_ID[rid] for rid in page.get("related", [])],
+    )
+    return templates.TemplateResponse("/guide.html", context)
 
 
 # --- Search UI -------------------------------------------------------------
@@ -451,13 +561,75 @@ async def robots_txt():
     )
 
 
+# Icons and social-share images. Whitelisted so arbitrary paths can't be read.
+_STATIC_FILES = {
+    "favicon.ico": "image/x-icon",
+    "favicon.svg": "image/svg+xml",
+    "apple-touch-icon.png": "image/png",
+    "og-da.png": "image/png",
+    "og-en.png": "image/png",
+}
+
+
+def _static_response(name: str):
+    if name not in _STATIC_FILES:
+        raise HTTPException(status_code=404)
+    return FileResponse(
+        os.path.join(STATIC_DIR, name),
+        media_type=_STATIC_FILES[name],
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_ico():
+    return _static_response("favicon.ico")
+
+
+@app.get("/favicon.svg", include_in_schema=False)
+async def favicon_svg():
+    return _static_response("favicon.svg")
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+async def apple_touch_icon():
+    return _static_response("apple-touch-icon.png")
+
+
+@app.get("/static/{name}", include_in_schema=False)
+async def static_file(name: str):
+    return _static_response(name)
+
+
+_HOME_HREFLANGS = [
+    ("da", "https://apicvr.dk/"),
+    ("en", "https://apicvr.dk/en/"),
+    ("x-default", "https://apicvr.dk/"),
+]
+
+_GUIDES_HREFLANGS = [
+    ("da", "https://apicvr.dk/guides/"),
+    ("en", "https://apicvr.dk/en/guides/"),
+    ("x-default", "https://apicvr.dk/guides/"),
+]
+
 _SITEMAP_URLS = [
     # (loc, hreflang_pairs, changefreq, priority)
-    ("https://apicvr.dk/", [("da", "https://apicvr.dk/"), ("en", "https://apicvr.dk/en/")], "weekly", "1.0"),
-    ("https://apicvr.dk/en/", [("da", "https://apicvr.dk/"), ("en", "https://apicvr.dk/en/")], "weekly", "1.0"),
+    ("https://apicvr.dk/", _HOME_HREFLANGS, "daily", "1.0"),
+    ("https://apicvr.dk/en/", _HOME_HREFLANGS, "daily", "1.0"),
+    ("https://apicvr.dk/guides/", _GUIDES_HREFLANGS, "weekly", "0.9"),
+    ("https://apicvr.dk/en/guides/", _GUIDES_HREFLANGS, "weekly", "0.9"),
     ("https://apicvr.dk/docs", [], "monthly", "0.8"),
     ("https://apicvr.dk/da/kapitalsog/", [], "monthly", "0.5"),
 ]
+
+for _page in GUIDE_PAGES:
+    _pairs = [
+        ("da", "https://apicvr.dk" + guide_url(_page, "da")),
+        ("en", "https://apicvr.dk" + guide_url(_page, "en")),
+        ("x-default", "https://apicvr.dk" + guide_url(_page, "da")),
+    ]
+    _SITEMAP_URLS += [(_pairs[0][1], _pairs, "monthly", "0.7"), (_pairs[1][1], _pairs, "monthly", "0.7")]
 
 
 @app.get("/sitemap.xml", include_in_schema=False)

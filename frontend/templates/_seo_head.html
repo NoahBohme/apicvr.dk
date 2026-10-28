@@ -1,0 +1,20 @@
+    <title>{{ seo.title }}</title>
+    <meta name="description" content="{{ seo.description }}">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+    <link rel="canonical" href="{{ site_url }}{{ alt_urls[lang] }}">
+    <link rel="alternate" hreflang="da" href="{{ site_url }}{{ alt_urls.da }}">
+    <link rel="alternate" hreflang="en" href="{{ site_url }}{{ alt_urls.en }}">
+    <link rel="alternate" hreflang="x-default" href="{{ site_url }}{{ alt_urls.da }}">
+    <meta property="og:site_name" content="APICVR.dk">
+    <meta property="og:type" content="{{ seo.og_type or 'website' }}">
+    <meta property="og:title" content="{{ seo.h1 }}">
+    <meta property="og:description" content="{{ seo.description }}">
+    <meta property="og:url" content="{{ site_url }}{{ alt_urls[lang] }}">
+    <meta property="og:locale" content="{{ 'da_DK' if lang == 'da' else 'en_US' }}">
+    <meta property="og:image" content="{{ site_url }}/static/og-{{ lang }}.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ seo.h1 }}">
+    <meta name="twitter:description" content="{{ seo.description }}">
+    <meta name="twitter:image" content="{{ site_url }}/static/og-{{ lang }}.png">
