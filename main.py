@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -32,7 +32,7 @@ from apis.searchcvr import (
     search_cvr_combined,
 )
 from app.modules.kapitalsog import show_capital_result
-from app.modules import guides
+from app.modules import api_reference, guides
 from app.modules.homepage_content import CONTENT as HOMEPAGE_CONTENT, ENDPOINTS as HOMEPAGE_ENDPOINTS
 from app.modules.site_ui import UI
 from app.modules.stats import get_public_stats, get_stats, init_db, log_request
@@ -230,7 +230,7 @@ def _base_context(request: Request) -> dict:
         docs_url = request.url_for("swagger_ui_html")
     except NoMatchFound:
         docs_url = f"{base_url}/docs"
-    return {"request": request, "base_url": base_url, "docs_url": docs_url, "site_url": SITE_URL}
+    return {"request": request, "base_url": base_url, "docs_url": docs_url, "swagger_url": docs_url, "site_url": SITE_URL}
 
 
 # --- Homepages -------------------------------------------------------------
@@ -254,13 +254,14 @@ async def _render_homepage(request: Request, lang: str):
         t=HOMEPAGE_CONTENT[lang],
         endpoints=HOMEPAGE_ENDPOINTS,
         stats=await run_in_threadpool(get_public_stats),
+        docs_url=api_reference.PATHS[lang],
     )
     return templates.TemplateResponse("/homepage.html", context)
 
 
 def _site_context(request: Request, lang: str, alt_urls: dict) -> dict:
     context = _base_context(request)
-    context.update(lang=lang, ui=UI[lang], alt_urls=alt_urls)
+    context.update(lang=lang, ui=UI[lang], alt_urls=alt_urls, docs_url=api_reference.PATHS[lang])
     return context
 
 
@@ -306,6 +307,77 @@ def _render_guide(request: Request, lang: str, slug: str):
         related=[GUIDES_BY_ID[rid] for rid in page.get("related", [])],
     )
     return templates.TemplateResponse("/guide.html", context)
+
+
+# --- API reference (crawlable counterpart to /docs) ------------------------
+
+@app.get("/api-dokumentation/", include_in_schema=False)
+async def api_reference_da(request: Request):
+    return _render_api_reference(request, "da")
+
+
+@app.get("/en/api-reference/", include_in_schema=False)
+async def api_reference_en(request: Request):
+    return _render_api_reference(request, "en")
+
+
+@app.get("/en/docs", include_in_schema=False)
+async def en_docs_redirect():
+    return RedirectResponse(api_reference.PATHS["en"], status_code=301)
+
+
+def _schema_type(prop: dict) -> str:
+    """Human-readable type for an OpenAPI property (pydantic v1 and v2 shapes)."""
+    if "$ref" in prop:
+        return prop["$ref"].rsplit("/", 1)[-1]
+    if "anyOf" in prop:
+        types = [_schema_type(p) for p in prop["anyOf"] if p.get("type") != "null"]
+        return " | ".join(types) or "any"
+    if prop.get("type") == "array":
+        return _schema_type(prop.get("items", {})) + "[]"
+    return prop.get("type", "any")
+
+
+_REFERENCE_CACHE: dict = {}
+
+
+def _reference_data(lang: str) -> dict:
+    if lang in _REFERENCE_CACHE:
+        return _REFERENCE_CACHE[lang]
+    spec = app.openapi()
+    company_props = spec["components"]["schemas"]["Company"]["properties"]
+    endpoints = []
+    for ep in api_reference.ENDPOINTS:
+        op = spec["paths"][ep["path"]]["get"]
+        params = [
+            {
+                "name": p["name"],
+                "in": p["in"],
+                "required": p.get("required", False),
+                "type": _schema_type(p.get("schema", {})),
+                "desc": api_reference.PARAMS.get(p["name"], {}).get(lang, ""),
+            }
+            for p in op.get("parameters", [])
+        ]
+        endpoints.append({**ep, **ep[lang], "params": params})
+    fields = [
+        {"name": name, "type": _schema_type(company_props.get(name, {})), "desc": da if lang == "da" else en}
+        for name, da, en in api_reference.COMPANY_FIELDS
+    ]
+    _REFERENCE_CACHE[lang] = {"endpoints": endpoints, "fields": fields}
+    return _REFERENCE_CACHE[lang]
+
+
+def _render_api_reference(request: Request, lang: str):
+    context = _site_context(request, lang, api_reference.PATHS)
+    text = api_reference.TEXT[lang]
+    context.update(
+        r=text,
+        seo={"title": text["title"], "description": text["description"], "h1": text["h1"], "og_type": "article"},
+        errors=[(status, code, da if lang == "da" else en) for status, code, da, en in api_reference.ERRORS],
+        **_reference_data(lang),
+    )
+    return templates.TemplateResponse("/api_reference.html", context)
 
 
 # --- Search UI -------------------------------------------------------------
@@ -558,7 +630,57 @@ async def robots_txt():
         "Disallow: /en/company/\n"
         "\n"
         "Sitemap: https://apicvr.dk/sitemap.xml\n"
+        "# LLM-friendly overview: https://apicvr.dk/llms.txt\n"
     )
+
+
+def _llms_txt(full: bool) -> str:
+    lines = [
+        "# APICVR.dk",
+        "",
+        "> Free, open-source JSON API for the Danish company register (CVR). No API key, no account. "
+        "Every endpoint is a GET request that returns JSON, with live data from the Danish Business "
+        "Authority's official CVR distribution.",
+        "",
+        "Base URL: https://apicvr.dk. CORS is enabled. Fair-use rate limits apply. "
+        "Check the `protected` field before using data for marketing (CVR Act sections 19 and 22).",
+        "",
+        "## Docs",
+        f"- [API reference]({SITE_URL}{api_reference.PATHS['en']}): every endpoint, parameter, response field and error code",
+        f"- [API-dokumentation (dansk)]({SITE_URL}{api_reference.PATHS['da']})",
+        f"- [OpenAPI spec]({SITE_URL}/openapi.json)",
+        "",
+        "## Endpoints",
+    ]
+    for ep in api_reference.ENDPOINTS:
+        lines.append(f"- `GET {ep['path']}`: {ep['en']['name']}. Example: {SITE_URL}{ep['example']}")
+    if full:
+        lines += ["", "## Company response fields"]
+        lines += [f"- `{name}`: {en.replace('<code>', '`').replace('</code>', '`')}" for name, _, en in api_reference.COMPANY_FIELDS]
+        lines += ["", "## Errors"]
+        lines += [
+            f"- HTTP {status} `{code}`: {en.replace('<code>', '`').replace('</code>', '`')}"
+            for status, code, _, en in api_reference.ERRORS
+        ]
+    for family, labels in guides.FAMILIES.items():
+        lines += ["", f"## Guides: {labels['en']}"]
+        for page in GUIDE_PAGES:
+            if page["family"] == family:
+                lines.append(f"- [{page['en']['h1']}]({SITE_URL}{guide_url(page, 'en')}): {page['en']['description']}")
+    lines += ["", "## Optional", "- [Source code (MIT)](https://github.com/NoahBohme/apicvr.dk)", f"- [Full version]({SITE_URL}/llms-full.txt)"]
+    if full:
+        lines.pop()
+    return "\n".join(lines) + "\n"
+
+
+@app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
+async def llms_txt():
+    return _llms_txt(full=False)
+
+
+@app.get("/llms-full.txt", response_class=PlainTextResponse, include_in_schema=False)
+async def llms_full_txt():
+    return _llms_txt(full=True)
 
 
 # Icons and social-share images. Whitelisted so arbitrary paths can't be read.
@@ -613,14 +735,20 @@ _GUIDES_HREFLANGS = [
     ("x-default", "https://apicvr.dk/guides/"),
 ]
 
+_REFERENCE_HREFLANGS = [
+    ("da", "https://apicvr.dk/api-dokumentation/"),
+    ("en", "https://apicvr.dk/en/api-reference/"),
+    ("x-default", "https://apicvr.dk/api-dokumentation/"),
+]
+
 _SITEMAP_URLS = [
     # (loc, hreflang_pairs, changefreq, priority)
     ("https://apicvr.dk/", _HOME_HREFLANGS, "daily", "1.0"),
     ("https://apicvr.dk/en/", _HOME_HREFLANGS, "daily", "1.0"),
     ("https://apicvr.dk/guides/", _GUIDES_HREFLANGS, "weekly", "0.9"),
     ("https://apicvr.dk/en/guides/", _GUIDES_HREFLANGS, "weekly", "0.9"),
-    ("https://apicvr.dk/docs", [], "monthly", "0.8"),
-    ("https://apicvr.dk/da/kapitalsog/", [], "monthly", "0.5"),
+    ("https://apicvr.dk/api-dokumentation/", _REFERENCE_HREFLANGS, "monthly", "0.9"),
+    ("https://apicvr.dk/en/api-reference/", _REFERENCE_HREFLANGS, "monthly", "0.9"),
 ]
 
 for _page in GUIDE_PAGES:

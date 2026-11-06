@@ -229,7 +229,7 @@
 
         /* --- Footer ---------------------------------------------------- */
         .site-footer { background: var(--navy); color: #c5d0da; margin-top: 80px; padding: 48px 0 32px; font-size: 0.92em; }
-        .footer-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; margin-bottom: 36px; }
+        .footer-cols { display: grid; grid-template-columns: repeat(5, 1fr); gap: 28px; margin-bottom: 36px; }
         .footer-cols h4 { color: white; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
         .footer-cols ul { list-style: none; }
         .footer-cols li { margin: 6px 0; }
@@ -285,7 +285,7 @@
                 {% endfor %}
             </div>
             <div class="footer-base">
-                <p>{{ ui.footer_by }} <a href="https://noahbohme.com">Noah Böhme</a> · {{ ui.footer_oss }} · <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a> · <a href="{{ docs_url }}">{{ ui.nav_docs }}</a></p>
+                <p>{{ ui.footer_by }} <a href="https://noahbohme.com">Noah Böhme</a> · {{ ui.footer_oss }} · <a href="https://github.com/NoahBohme/apicvr.dk">GitHub</a> · <a href="{{ docs_url }}">{{ ui.nav_docs }}</a> · <a href="{{ swagger_url }}">Swagger</a> · <a href="/llms.txt">llms.txt</a></p>
             </div>
         </div>
     </footer>

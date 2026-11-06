@@ -14,11 +14,11 @@
           "url": "{{ site_url }}{{ alt_urls[lang] }}",
           "mainEntityOfPage": "{{ site_url }}{{ alt_urls[lang] }}",
           "image": "{{ site_url }}/static/og-{{ lang }}.png",
-          "datePublished": "{{ guides_updated }}",
-          "dateModified": "{{ guides_updated }}",
+          "datePublished": "{{ page.updated or guides_updated }}",
+          "dateModified": "{{ page.updated or guides_updated }}",
           "author": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
           "publisher": {"@type": "Organization", "name": "APICVR.dk", "url": "{{ site_url }}/", "logo": {"@type": "ImageObject", "url": "{{ site_url }}/apple-touch-icon.png"}},
-          "about": {"@type": "WebAPI", "name": "CVR-API", "url": "{{ site_url }}/", "documentation": "{{ site_url }}/docs"}
+          "about": {"@type": "WebAPI", "name": "CVR-API", "url": "{{ site_url }}/", "documentation": "{{ site_url }}{{ docs_url }}"}
         },
         {
           "@type": "BreadcrumbList",

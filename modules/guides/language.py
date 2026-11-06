@@ -173,6 +173,185 @@ record Hit(
     [property: JsonPropertyName("cvr_number")] int CvrNumber,
     [property: JsonPropertyName("industrytext")] string? IndustryText);'''
 
+_JAVA_LOOKUP = '''import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.List;
+
+public class Cvr {
+    record Owner(String name, String ownership_range) {}
+    record Company(int vat, String name, Integer zipcode, String city,
+                   String industrydesc, List<Owner> ejere) {}
+
+    static final HttpClient HTTP = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10)).build();
+    static final ObjectMapper JSON = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    static Company getCompany(int cvr) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder(URI.create("{site}/api/v1/" + cvr)).GET().build();
+        HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        if (res.statusCode() == 404) return null;
+        if (res.statusCode() != 200) throw new RuntimeException("CVR-API svarede " + res.statusCode());
+        return JSON.readValue(res.body(), Company.class);
+    }
+
+    public static void main(String[] args) throws Exception {
+        Company c = getCompany(24256790);
+        System.out.println(c.name() + ", " + c.zipcode() + " " + c.city());
+        for (Owner o : c.ejere()) System.out.println(o.name() + " " + o.ownership_range());
+    }
+}'''
+
+_JAVA_SEARCH = '''import com.fasterxml.jackson.core.type.TypeReference;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+record Hit(String name, Integer cvr_number, String industrytext) {}
+
+static List<Hit> search(String name) throws Exception {
+    String q = URLEncoder.encode(name, StandardCharsets.UTF_8).replace("+", "%20");
+    HttpRequest req = HttpRequest.newBuilder(URI.create("{site}/api/v1/search/fuzzy/" + q)).build();
+    String body = HTTP.send(req, HttpResponse.BodyHandlers.ofString()).body();
+    return JSON.readValue(body, new TypeReference<List<Hit>>() {});
+}
+
+// search("novo nordisk").stream().limit(5)
+//     .forEach(h -> System.out.println(h.cvr_number() + " " + h.name()));'''
+
+_JAVA_MAVEN = '''<dependency>
+  <groupId>com.fasterxml.jackson.core</groupId>
+  <artifactId>jackson-databind</artifactId>
+  <version>2.17.2</version>
+</dependency>'''
+
+_GO_LOOKUP = '''package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+type Owner struct {
+	Name           string `json:"name"`
+	Type           string `json:"type"`
+	OwnershipRange string `json:"ownership_range"`
+}
+
+type Company struct {
+	Vat          int     `json:"vat"`
+	Name         string  `json:"name"`
+	Address      string  `json:"address"`
+	Zipcode      int     `json:"zipcode"`
+	City         string  `json:"city"`
+	IndustryDesc string  `json:"industrydesc"`
+	Protected    bool    `json:"protected"`
+	Ejere        []Owner `json:"ejere"`
+}
+
+var ErrNotFound = errors.New("cvr: company not found")
+
+var client = &http.Client{Timeout: 15 * time.Second}
+
+func GetCompany(cvr int) (*Company, error) {
+	res, err := client.Get(fmt.Sprintf("{site}/api/v1/%d", cvr))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	switch res.StatusCode {
+	case http.StatusOK:
+		var c Company
+		return &c, json.NewDecoder(res.Body).Decode(&c)
+	case http.StatusNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, fmt.Errorf("cvr: unexpected status %d", res.StatusCode)
+	}
+}
+
+func main() {
+	c, err := GetCompany(24256790)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(c.Name, c.Zipcode, c.City)
+	for _, o := range c.Ejere {
+		fmt.Println(o.Name, o.OwnershipRange)
+	}
+}'''
+
+_GO_SEARCH = '''type Hit struct {
+	Name         string `json:"name"`
+	CvrNumber    int    `json:"cvr_number"`
+	IndustryText string `json:"industrytext"`
+}
+
+func Search(name string) ([]Hit, error) {
+	res, err := client.Get("{site}/api/v1/search/fuzzy/" + url.PathEscape(name))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	var hits []Hit
+	return hits, json.NewDecoder(res.Body).Decode(&hits)
+}
+
+// Kræver import af "net/url".'''
+
+_RUBY_LOOKUP = '''require "net/http"
+require "json"
+
+def get_company(cvr)
+  uri = URI("{site}/api/v1/#{cvr}")
+  res = Net::HTTP.get_response(uri)
+
+  case res
+  when Net::HTTPOK       then JSON.parse(res.body)
+  when Net::HTTPNotFound then nil
+  else raise "CVR-API svarede #{res.code}" # 422 eller 502
+  end
+end
+
+company = get_company(24256790)
+puts "#{company["name"]}, #{company["zipcode"]} #{company["city"]}"
+
+company["ejere"].each do |owner|
+  puts "#{owner["name"]} #{owner["ownership_range"]}"
+end'''
+
+_RUBY_SEARCH = '''require "net/http"
+require "json"
+require "erb"
+
+def search(name)
+  uri = URI("{site}/api/v1/search/fuzzy/#{ERB::Util.url_encode(name)}")
+  JSON.parse(Net::HTTP.get(uri))
+end
+
+search("novo nordisk").first(5).each do |hit|
+  puts "#{hit["cvr_number"]} #{hit["name"]} - #{hit["industrytext"]}"
+end'''
+
+_RUBY_RAILS = '''# app/services/cvr_lookup.rb
+class CvrLookup
+  def self.call(cvr)
+    Rails.cache.fetch("cvr/#{cvr}", expires_in: 6.hours) do
+      res = Net::HTTP.get_response(URI("{site}/api/v1/#{cvr}"))
+      res.is_a?(Net::HTTPOK) ? JSON.parse(res.body) : nil
+    end
+  end
+end'''
+
 _PQ_LOOKUP = '''let
     Source = Json.Document(Web.Contents("{site}/api/v1/24256790")),
     Company = Record.SelectFields(Source,
@@ -440,7 +619,7 @@ PAGES = [
         "id": "csharp",
         "family": "language",
         "slug": {"da": "cvr-api-csharp", "en": "cvr-api-csharp"},
-        "related": ["python", "owners-management", "validate-cvr"],
+        "related": ["java", "owners-management", "validate-cvr"],
         "da": {
             "title": "CVR API i C# og .NET – opslag med HttpClient",
             "description": "Slå danske virksomheder op i C# og .NET med HttpClient og System.Text.Json. Eksempler på CVR-opslag, navnesøgning, ejere og fejlhåndtering.",
@@ -481,6 +660,169 @@ PAGES = [
             "faq": [
                 ("How do I use HttpClient in ASP.NET Core?", "Register a typed client with <code>builder.Services.AddHttpClient&lt;CvrClient&gt;()</code> instead of creating a new HttpClient per request."),
                 ("Why are some field names Danish?", "Fields like <code>ejere</code> (owners) and <code>direktion</code> (management) follow the CVR register's own terms. With <code>JsonPropertyName</code> you can give them English names in your code."),
+            ],
+        },
+    },
+    {
+        "id": "java",
+        "updated": "2026-11-06",
+        "family": "language",
+        "slug": {"da": "cvr-api-java", "en": "cvr-api-java"},
+        "related": ["csharp", "owners-management", "validate-cvr"],
+        "da": {
+            "title": "CVR API i Java – opslag med HttpClient og Jackson",
+            "description": "Slå danske virksomheder op i Java med den indbyggede HttpClient og Jackson. Kodeeksempler på CVR-opslag, navnesøgning, ejere og fejlhåndtering.",
+            "h1": "CVR-opslag i Java",
+            "lead": "Fra Java 11 og frem har du en HTTP-klient i standardbiblioteket, så et CVR-opslag kræver kun ét kald og en JSON-parser. Du behøver ingen API-nøgle.",
+            "blocks": [
+                ("h2", "Slå en virksomhed op på CVR-nummer"),
+                ("p", "Eksemplet bruger <code>java.net.http.HttpClient</code> og records fra Java 16+. Jackson mapper JSON-svaret til records'ene og ignorerer de felter, du ikke har taget med."),
+                ("code", "java", _JAVA_LOOKUP),
+                ("p", "Bemærk: <code>protected</code> er et reserveret ord i Java. Vil du læse feltet, så annotér komponenten med <code>@JsonProperty(\"protected\")</code>."),
+                ("h2", "Tilføj Jackson"),
+                ("p", "Java har ingen indbygget JSON-parser. Jackson er det mest udbredte valg. Med Maven:"),
+                ("code", "xml", _JAVA_MAVEN),
+                ("h2", "Søg på virksomhedsnavn"),
+                ("p", "Fuzzy-søgningen returnerer et slankt svar med <code>name</code>, <code>cvr_number</code>, <code>industrycode</code> og <code>industrytext</code>, også når navnet er stavet lidt forkert."),
+                ("code", "java", _JAVA_SEARCH),
+                ("h2", "Håndter fejl"),
+                _errors_table("da"),
+                ("note", _PROTECTED_DA),
+            ],
+            "faq": [
+                ("Virker det i Spring Boot?", "Ja. Du kan bruge <code>RestClient</code> eller <code>WebClient</code> i stedet for HttpClient. Spring Boot har allerede Jackson med, så du skal kun definere dine records."),
+                ("Hvilken Java-version kræves?", "HttpClient kræver Java 11. Records kræver Java 16. På ældre versioner kan du bruge almindelige klasser med getters i stedet."),
+                ("Skal jeg bruge en API-nøgle?", "Nej. CVR-API kræver hverken nøgle eller konto."),
+            ],
+        },
+        "en": {
+            "title": "CVR API in Java – lookups with HttpClient and Jackson",
+            "description": "Look up Danish companies in Java with the built-in HttpClient and Jackson. Code examples for CVR lookup, name search, owners and error handling.",
+            "h1": "CVR lookups in Java",
+            "lead": "Since Java 11 the standard library has an HTTP client, so a CVR lookup only takes one request and a JSON parser. You don't need an API key.",
+            "blocks": [
+                ("h2", "Look up a company by CVR number"),
+                ("p", "This example uses <code>java.net.http.HttpClient</code> and records from Java 16+. Jackson maps the JSON response onto the records and ignores the fields you left out."),
+                ("code", "java", _JAVA_LOOKUP),
+                ("p", "Note: <code>protected</code> is a reserved word in Java. To read the field, annotate the component with <code>@JsonProperty(\"protected\")</code>."),
+                ("h2", "Add Jackson"),
+                ("p", "Java has no built-in JSON parser. Jackson is the most common choice. With Maven:"),
+                ("code", "xml", _JAVA_MAVEN),
+                ("h2", "Search by company name"),
+                ("p", "Fuzzy search returns a slim response with <code>name</code>, <code>cvr_number</code>, <code>industrycode</code> and <code>industrytext</code>, even when the name is slightly misspelled."),
+                ("code", "java", _JAVA_SEARCH),
+                ("h2", "Handle errors"),
+                _errors_table("en"),
+                ("note", _PROTECTED_EN),
+            ],
+            "faq": [
+                ("Does it work in Spring Boot?", "Yes. You can use <code>RestClient</code> or <code>WebClient</code> instead of HttpClient. Spring Boot already ships Jackson, so you only need to define your records."),
+                ("Which Java version is required?", "HttpClient needs Java 11. Records need Java 16. On older versions, use plain classes with getters instead."),
+                ("Do I need an API key?", "No. CVR-API needs no key and no account."),
+            ],
+        },
+    },
+    {
+        "id": "go",
+        "updated": "2026-11-06",
+        "family": "language",
+        "slug": {"da": "cvr-api-go", "en": "cvr-api-go"},
+        "related": ["python", "owners-management", "validate-cvr"],
+        "da": {
+            "title": "CVR API i Go – opslag med net/http og encoding/json",
+            "description": "Slå danske virksomheder op i Go med net/http og encoding/json fra standardbiblioteket. Eksempler på CVR-opslag, navnesøgning, ejere og fejl.",
+            "h1": "CVR-opslag i Go",
+            "lead": "I Go klarer standardbiblioteket det hele: <code>net/http</code> til kaldet og <code>encoding/json</code> til at læse svaret ind i en struct. Ingen API-nøgle, ingen eksterne pakker.",
+            "blocks": [
+                ("h2", "Slå en virksomhed op på CVR-nummer"),
+                ("p", "Structen indeholder kun de felter, du har brug for. Felter i svaret, som ikke er med i structen, bliver ignoreret."),
+                ("code", "go", _GO_LOOKUP),
+                ("h2", "Søg på virksomhedsnavn"),
+                ("p", "Fuzzy-søgningen finder virksomheder, selv om navnet er stavet lidt forkert. Hvert hit har <code>name</code>, <code>cvr_number</code>, <code>industrycode</code> og <code>industrytext</code>."),
+                ("code", "go", _GO_SEARCH),
+                ("h2", "Håndter fejl"),
+                _errors_table("da"),
+                ("p", "I eksemplet bliver 404 til <code>ErrNotFound</code>, så du kan tjekke det med <code>errors.Is(err, ErrNotFound)</code>. Andre statuskoder giver en almindelig fejl."),
+                ("note", _PROTECTED_DA),
+            ],
+            "faq": [
+                ("Hvorfor er nogle felter null?", "Felter uden værdi i CVR er <code>null</code> i JSON. Med almindelige typer i structen får du nulværdien (fx en tom streng). Brug pointere som <code>*string</code>, hvis du skal kende forskel."),
+                ("Kan jeg kalde API'et parallelt fra goroutines?", "Ja, men hold tempoet nede, fx med en semaphore på få samtidige kald. Har du brug for vedvarende høj trafik, så skriv til noah@noahbohme.com."),
+            ],
+        },
+        "en": {
+            "title": "CVR API in Go – lookups with net/http and encoding/json",
+            "description": "Look up Danish companies in Go with net/http and encoding/json from the standard library. Examples for CVR lookup, name search, owners and errors.",
+            "h1": "CVR lookups in Go",
+            "lead": "In Go the standard library covers everything: <code>net/http</code> for the request and <code>encoding/json</code> to decode the response into a struct. No API key, no third-party packages.",
+            "blocks": [
+                ("h2", "Look up a company by CVR number"),
+                ("p", "The struct only holds the fields you need. Fields in the response that aren't in the struct are ignored."),
+                ("code", "go", _GO_LOOKUP),
+                ("h2", "Search by company name"),
+                ("p", "Fuzzy search finds companies even when the name is slightly misspelled. Each hit has <code>name</code>, <code>cvr_number</code>, <code>industrycode</code> and <code>industrytext</code>."),
+                ("code", "go", _GO_SEARCH),
+                ("h2", "Handle errors"),
+                _errors_table("en"),
+                ("p", "In the example, 404 becomes <code>ErrNotFound</code>, so you can check for it with <code>errors.Is(err, ErrNotFound)</code>. Other status codes return a plain error."),
+                ("note", _PROTECTED_EN),
+            ],
+            "faq": [
+                ("Why are some fields null?", "Fields without a value in CVR are <code>null</code> in the JSON. With plain types in the struct you get the zero value (e.g. an empty string). Use pointers such as <code>*string</code> if you need to tell the difference."),
+                ("Can I call the API concurrently from goroutines?", "Yes, but keep the pace down, for example with a semaphore allowing a few requests at a time. If you need sustained heavy traffic, email noah@noahbohme.com."),
+            ],
+        },
+    },
+    {
+        "id": "ruby",
+        "updated": "2026-11-06",
+        "family": "language",
+        "slug": {"da": "cvr-api-ruby", "en": "cvr-api-ruby"},
+        "related": ["python", "owners-management", "validate-cvr"],
+        "da": {
+            "title": "CVR API i Ruby og Rails – opslag med Net::HTTP",
+            "description": "Slå danske virksomheder op i Ruby og Rails med Net::HTTP og JSON fra standardbiblioteket. Eksempler på CVR-opslag, navnesøgning, cache og fejl.",
+            "h1": "CVR-opslag i Ruby og Rails",
+            "lead": "Ruby har både HTTP og JSON i standardbiblioteket, så et CVR-opslag fylder kun et par linjer. Du behøver hverken gems eller API-nøgle.",
+            "blocks": [
+                ("h2", "Slå en virksomhed op på CVR-nummer"),
+                ("code", "ruby", _RUBY_LOOKUP),
+                ("h2", "Søg på virksomhedsnavn"),
+                ("p", "Fuzzy-søgningen finder virksomheder, selv om navnet er stavet lidt forkert. Hvert hit har <code>name</code>, <code>cvr_number</code>, <code>industrycode</code> og <code>industrytext</code>."),
+                ("code", "ruby", _RUBY_SEARCH),
+                ("h2", "I en Rails-app"),
+                ("p", "Firmadata ændrer sig sjældent. Læg opslaget i en service, og cache svaret, så samme CVR-nummer ikke slås op ved hver request:"),
+                ("code", "ruby", _RUBY_RAILS),
+                ("h2", "Håndter fejl"),
+                _errors_table("da"),
+                ("note", _PROTECTED_DA),
+            ],
+            "faq": [
+                ("Kan jeg bruge Faraday eller HTTParty?", "Ja. API'et er et almindeligt GET-kald, der returnerer JSON, så enhver HTTP-klient virker. Eksemplerne bruger Net::HTTP, fordi det ikke kræver nogen gems."),
+                ("Skal jeg bruge en API-nøgle?", "Nej. CVR-API kræver hverken nøgle eller konto."),
+            ],
+        },
+        "en": {
+            "title": "CVR API in Ruby and Rails – lookups with Net::HTTP",
+            "description": "Look up Danish companies in Ruby and Rails with Net::HTTP and JSON from the standard library. Examples for CVR lookup, name search, caching and errors.",
+            "h1": "CVR lookups in Ruby and Rails",
+            "lead": "Ruby ships both HTTP and JSON in the standard library, so a CVR lookup only takes a few lines. You don't need any gems or an API key.",
+            "blocks": [
+                ("h2", "Look up a company by CVR number"),
+                ("code", "ruby", _RUBY_LOOKUP),
+                ("h2", "Search by company name"),
+                ("p", "Fuzzy search finds companies even when the name is slightly misspelled. Each hit has <code>name</code>, <code>cvr_number</code>, <code>industrycode</code> and <code>industrytext</code>."),
+                ("code", "ruby", _RUBY_SEARCH),
+                ("h2", "In a Rails app"),
+                ("p", "Company data rarely changes. Put the lookup in a service and cache the response, so the same CVR number isn't looked up on every request:"),
+                ("code", "ruby", _RUBY_RAILS),
+                ("h2", "Handle errors"),
+                _errors_table("en"),
+                ("note", _PROTECTED_EN),
+            ],
+            "faq": [
+                ("Can I use Faraday or HTTParty?", "Yes. The API is a plain GET request that returns JSON, so any HTTP client works. The examples use Net::HTTP because it needs no gems."),
+                ("Do I need an API key?", "No. CVR-API needs no key and no account."),
             ],
         },
     },

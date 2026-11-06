@@ -1,0 +1,125 @@
+{% extends "_layout.html" %}
+
+{% block head %}
+{% include "_seo_head.html" %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "TechArticle",
+          "headline": {{ r.h1|tojson }},
+          "description": {{ r.description|tojson }},
+          "inLanguage": "{{ lang }}",
+          "url": "{{ site_url }}{{ alt_urls[lang] }}",
+          "mainEntityOfPage": "{{ site_url }}{{ alt_urls[lang] }}",
+          "dateModified": "{{ guides_updated }}",
+          "author": {"@type": "Person", "name": "Noah Böhme", "url": "https://noahbohme.com"},
+          "publisher": {"@type": "Organization", "name": "APICVR.dk", "url": "{{ site_url }}/", "logo": {"@type": "ImageObject", "url": "{{ site_url }}/apple-touch-icon.png"}}
+        },
+        {
+          "@type": "WebAPI",
+          "name": "CVR-API",
+          "description": {{ r.description|tojson }},
+          "url": "{{ site_url }}/",
+          "documentation": "{{ site_url }}{{ alt_urls[lang] }}",
+          "provider": {"@type": "Organization", "name": "APICVR.dk", "url": "{{ site_url }}/"},
+          "offers": {"@type": "Offer", "price": "0", "priceCurrency": "DKK"}
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": {{ ui.crumb_home|tojson }}, "item": "{{ site_url }}{{ ui.home_path }}"},
+            {"@type": "ListItem", "position": 2, "name": {{ r.crumb|tojson }}, "item": "{{ site_url }}{{ alt_urls[lang] }}"}
+          ]
+        }
+      ]
+    }
+    </script>
+    <style>
+        .ref-endpoint { scroll-margin-top: 20px; }
+        .ref-path { font-family: var(--mono); font-size: 0.95em; background: white; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; word-break: break-all; }
+        .ref-path .verb { font-weight: 700; color: var(--accent-ink); background: #e3f8ee; padding: 2px 8px; border-radius: 4px; margin-right: 10px; font-size: 0.85em; }
+        .ref-meta { font-size: 0.85em; color: var(--muted); }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <header class="page-hero">
+        <div class="wrap">
+            <nav class="crumbs" aria-label="Breadcrumb"><a href="{{ ui.home_path }}">{{ ui.crumb_home }}</a> / <span>{{ r.crumb }}</span></nav>
+            <h1>{{ r.h1 }}</h1>
+            <p class="lead">{{ r.lead }}</p>
+        </div>
+    </header>
+
+    <main class="wrap article-grid">
+        <article class="article">
+            <h2 id="basics">{{ r.basics }}</h2>
+            <ul>{% for item in r.basics_items %}<li>{{ item|safe }}</li>{% endfor %}</ul>
+            <div class="codeblock"><div class="codeblock-label">bash</div><pre><code>curl {{ site_url }}/api/v1/41013583</code></pre></div>
+
+            {% for ep in endpoints %}
+            <section class="ref-endpoint" id="{{ ep.anchor }}">
+                <h2>{{ ep.name }}</h2>
+                <div class="ref-path"><span class="verb">GET</span>{{ ep.path }}</div>
+                <p>{{ ep.text|safe }}</p>
+                {% if ep.params %}
+                <div style="overflow-x:auto"><table>
+                    <thead><tr><th>{{ r.param }}</th><th>{{ r.where }}</th><th>{{ r.type }}</th><th>{{ r.desc }}</th></tr></thead>
+                    <tbody>
+                    {% for p in ep.params %}
+                    <tr>
+                        <td><code>{{ p.name }}</code><br><span class="ref-meta">{{ r.required if p.required else r.optional }}</span></td>
+                        <td>{{ r.where_path if p.in == "path" else r.where_query }}</td>
+                        <td><code>{{ p.type }}</code></td>
+                        <td>{{ p.desc|safe }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table></div>
+                {% endif %}
+                <div class="codeblock"><div class="codeblock-label">{{ r.example }}</div><pre><code>curl "{{ site_url }}{{ ep.example }}"</code></pre></div>
+                <p class="ref-meta"><a href="{{ ep.example }}" rel="nofollow">{{ r.try }} →</a></p>
+            </section>
+            {% endfor %}
+
+            <h2 id="fields">{{ r.fields }}</h2>
+            <p>{{ r.fields_sub|safe }}</p>
+            <div style="overflow-x:auto"><table>
+                <thead><tr><th>{{ r.field }}</th><th>{{ r.type }}</th><th>{{ r.desc }}</th></tr></thead>
+                <tbody>
+                {% for f in fields %}<tr><td><code>{{ f.name }}</code></td><td><code>{{ f.type }}</code></td><td>{{ f.desc|safe }}</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+
+            <h2 id="errors">{{ r.errors }}</h2>
+            <p>{{ r.errors_sub|safe }}</p>
+            <div style="overflow-x:auto"><table>
+                <thead><tr><th>{{ r.status }}</th><th>{{ r.code }}</th><th>{{ r.desc }}</th></tr></thead>
+                <tbody>
+                {% for status, code, desc in errors %}<tr><td><code>{{ status }}</code></td><td><code>{{ code }}</code></td><td>{{ desc|safe }}</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+
+            <p>{{ r.swagger_text }} <a href="{{ swagger_url }}">{{ r.swagger }}</a> · <a href="/openapi.json">{{ r.openapi }}</a></p>
+        </article>
+
+        <aside class="sidebar">
+            <div class="side-card">
+                <h3>{{ r.toc }}</h3>
+                <ul>
+                    <li><a href="#basics">{{ r.basics }}</a></li>
+                    {% for ep in endpoints %}<li><a href="#{{ ep.anchor }}">{{ ep.name }}</a></li>{% endfor %}
+                    <li><a href="#fields">{{ r.fields }}</a></li>
+                    <li><a href="#errors">{{ r.errors }}</a></li>
+                </ul>
+            </div>
+            <div class="side-card cta">
+                <h3>{{ ui.cta_title }}</h3>
+                <p>{{ ui.cta_text }}</p>
+                <a class="btn btn-primary" href="{{ ui.home_path }}#try">{{ ui.cta_btn }}</a>
+            </div>
+        </aside>
+    </main>
+{% endblock %}

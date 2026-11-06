@@ -362,6 +362,70 @@ GET {site}/api/v1/search/fuzzy/[company name]
 """
 
 
+_AI_TOOLS = """\
+[
+  {
+    "name": "cvr_lookup",
+    "description": "Look up a Danish company by its 8-digit CVR number. Returns name, address, industry, status, owners and management.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "cvr": {"type": "string", "description": "8-digit CVR number, e.g. 24256790"}
+      },
+      "required": ["cvr"]
+    }
+  },
+  {
+    "name": "cvr_search",
+    "description": "Find Danish companies by name. Tolerates typos. Returns name, cvr_number and industry for each hit.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "description": "Company name or part of it"}
+      },
+      "required": ["name"]
+    }
+  }
+]"""
+
+_AI_HANDLER = """\
+import json
+import urllib.error
+import urllib.parse
+import urllib.request
+
+BASE = "{site}/api/v1"
+
+def _get(url):
+    try:
+        with urllib.request.urlopen(url, timeout=15) as res:
+            return json.load(res)
+    except urllib.error.HTTPError as err:
+        return {"error": err.code}
+
+def run_tool(name, args):
+    if name == "cvr_lookup":
+        company = _get(f"{BASE}/{args['cvr']}")
+        company.pop("p_units", None)  # keep the context small
+        return json.dumps(company, ensure_ascii=False)
+    if name == "cvr_search":
+        hits = _get(f"{BASE}/search/fuzzy/" + urllib.parse.quote(args["name"]) + "?limit=5")
+        return json.dumps(hits, ensure_ascii=False)
+    return json.dumps({"error": "unknown tool"})"""
+
+_AI_PROMPT_DA = """\
+Du har adgang til CVR-API (https://apicvr.dk), et gratis JSON API til
+det danske CVR-register uden API-nøgle. Brug cvr_search til at finde
+CVR-nummeret ud fra et navn, og cvr_lookup til at hente detaljer.
+Hvis feltet "protected" er true, må virksomheden ikke kontaktes med
+markedsføring."""
+
+_AI_PROMPT_EN = """\
+You have access to CVR-API (https://apicvr.dk), a free JSON API for the
+Danish CVR register with no API key. Use cvr_search to find the CVR
+number from a name, and cvr_lookup to fetch details. If the "protected"
+field is true, the company must not be contacted with marketing."""
+
 PAGES = [
     {
         "id": "woocommerce",
@@ -798,6 +862,112 @@ PAGES = [
                 ("What if the CVR number doesn't exist?",
                  "The API responds with HTTP 404. In Zapier and Make you can catch that with a filter or an error "
                  "handler so the rest of the flow continues."),
+            ],
+        },
+    },
+    {
+        "id": "ai-agents",
+        "updated": "2026-11-06",
+        "family": "integration",
+        "slug": {"da": "cvr-data-ai-agenter", "en": "cvr-data-for-ai-agents"},
+        "related": ["python", "owners-management", "zapier-make"],
+        "da": {
+            "title": "CVR-data i AI-agenter og LLM'er via tool calling",
+            "description": (
+                "Giv din AI-agent eller chatbot adgang til danske virksomhedsdata. Færdige tool-definitioner, "
+                "Python-handler og llms.txt til CVR-opslag uden API-nøgle."
+            ),
+            "h1": "CVR-data til AI-agenter og LLM'er",
+            "lead": (
+                "Sprogmodeller kender ikke det aktuelle CVR-register. Giv dem i stedet to værktøjer: ét til "
+                "at søge på navn og ét til at slå op på CVR-nummer. Fordi CVR-API ikke kræver nøgle, er der "
+                "ingen hemmeligheder at holde styr på i din agent."
+            ),
+            "blocks": [
+                ("h2", "Tool-definitioner"),
+                ("p", "Definitionerne bruger JSON Schema, som de fleste modeller og agent-frameworks forstår. "
+                      "Nogle kalder feltet <code>parameters</code> i stedet for <code>input_schema</code>. "
+                      "Indholdet er det samme."),
+                ("code", "json", _AI_TOOLS),
+                ("h2", "Handler i Python"),
+                ("p", "Når modellen kalder et værktøj, kører du funktionen og sender resultatet tilbage som "
+                      "tekst. P-enhederne fjernes, fordi store virksomheder kan have hundredvis, og de fylder "
+                      "meget i modellens kontekst."),
+                ("code", "python", _AI_HANDLER),
+                ("h2", "Systemprompt"),
+                ("code", "text", _AI_PROMPT_DA),
+                ("h2", "llms.txt"),
+                ("p", "Bruger du en agent, der selv læser dokumentation, så peg den på "
+                      "<a href=\"{site}/llms.txt\">{site}/llms.txt</a>. Filen beskriver alle endpoints kort i "
+                      "Markdown. <a href=\"{site}/llms-full.txt\">llms-full.txt</a> indeholder også alle "
+                      "svarfelter og fejlkoder."),
+                ("h2", "Gode råd"),
+                ("ul", [
+                    "Lad modellen søge først og slå op bagefter. Navne er tvetydige, CVR-numre er ikke.",
+                    "Brug <code>/api/v1/{cvr}/direktion-og-ansvarlig</code>, hvis agenten kun skal kende ejere og "
+                    "ledelse. Svaret er meget mindre.",
+                    "Cache svarene i din agent. CVR-data ændrer sig sjældent fra minut til minut.",
+                    "Ejere og direktører er personoplysninger. Brug dem kun til formål, du har lovligt grundlag for.",
+                ]),
+            ],
+            "faq": [
+                ("Virker det med alle sprogmodeller?",
+                 "Ja, med alle modeller og frameworks, der understøtter tool calling eller function calling. "
+                 "Selve API'et er bare HTTP og JSON."),
+                ("Skal agenten have en API-nøgle?",
+                 "Nej. CVR-API kræver ingen nøgle, så der er intet at gemme eller rotere."),
+                ("Kan agenten få regnskabstal?",
+                 "Nej, regnskaber er ikke en del af CVR-API. Agenten får stamdata, ejere, direktion og P-enheder."),
+            ],
+        },
+        "en": {
+            "title": "CVR Data for AI Agents and LLMs via Tool Calling",
+            "description": (
+                "Give your AI agent or chatbot access to Danish company data. Ready-made tool definitions, a "
+                "Python handler and llms.txt for CVR lookups with no API key."
+            ),
+            "h1": "CVR data for AI agents and LLMs",
+            "lead": (
+                "Language models don't know the current CVR register. Give them two tools instead: one to "
+                "search by name and one to look up by CVR number. Since CVR-API needs no key, there are no "
+                "secrets to manage in your agent."
+            ),
+            "blocks": [
+                ("h2", "Tool definitions"),
+                ("p", "The definitions use JSON Schema, which most models and agent frameworks understand. Some "
+                      "call the field <code>parameters</code> instead of <code>input_schema</code>. The content is "
+                      "the same."),
+                ("code", "json", _AI_TOOLS),
+                ("h2", "Python handler"),
+                ("p", "When the model calls a tool, run the function and send the result back as text. Production "
+                      "units are dropped because large companies can have hundreds, and they take up a lot of the "
+                      "model's context."),
+                ("code", "python", _AI_HANDLER),
+                ("h2", "System prompt"),
+                ("code", "text", _AI_PROMPT_EN),
+                ("h2", "llms.txt"),
+                ("p", "If your agent reads documentation on its own, point it at "
+                      "<a href=\"{site}/llms.txt\">{site}/llms.txt</a>. It describes every endpoint briefly in "
+                      "Markdown. <a href=\"{site}/llms-full.txt\">llms-full.txt</a> also lists every response field "
+                      "and error code."),
+                ("h2", "Tips"),
+                ("ul", [
+                    "Let the model search first and look up afterwards. Names are ambiguous, CVR numbers aren't.",
+                    "Use <code>/api/v1/{cvr}/direktion-og-ansvarlig</code> if the agent only needs owners and "
+                    "management. The response is much smaller.",
+                    "Cache responses in your agent. CVR data rarely changes minute to minute.",
+                    "Owners and directors are personal data. Only use them for purposes you have a lawful basis for.",
+                ]),
+            ],
+            "faq": [
+                ("Does it work with every language model?",
+                 "Yes, with any model or framework that supports tool calling or function calling. The API itself "
+                 "is just HTTP and JSON."),
+                ("Does the agent need an API key?",
+                 "No. CVR-API needs no key, so there's nothing to store or rotate."),
+                ("Can the agent get financial figures?",
+                 "No, financial statements aren't part of CVR-API. The agent gets company details, owners, "
+                 "management and production units."),
             ],
         },
     },

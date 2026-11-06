@@ -97,6 +97,10 @@ _DA = {
         ("Kan jeg se ejere og direktion?",
          "Ja. Det fulde opslag indeholder legale ejere med ejerandel samt direktion. Har du kun brug for "
          "personerne, så brug <code>/api/v1/{cvr}/direktion-og-ansvarlig</code>."),
+        ("Hvad er forskellen på apicvr.dk, cvrapi.dk og cvr.dev?",
+         "apicvr.dk er gratis uden API-nøgle og uden fast dagskvote. cvrapi.dk giver 50 gratis opslag om dagen, "
+         "og cvr.dev er et betalt API med regnskabsdata. Se <a href=\"/guides/cvr-api-sammenligning\">den fulde "
+         "sammenligning</a> eller <a href=\"/guides/skift-fra-cvrapi-dk\">guiden til at skifte fra cvrapi.dk</a>."),
         ("Må jeg bruge data til markedsføring?",
          "Kun for virksomheder uden reklamebeskyttelse. Feltet <code>protected</code> er <code>true</code>, "
          "når en virksomhed har frabedt sig reklamehenvendelser, jf. CVR-lovens § 19 og § 22."),
@@ -190,6 +194,10 @@ _EN = {
         ("Can I get owners and management?",
          "Yes. The full lookup includes legal owners with ownership share, plus management. If you only "
          "need the people, use <code>/api/v1/{cvr}/direktion-og-ansvarlig</code>."),
+        ("How does apicvr.dk compare to cvrapi.dk and cvr.dev?",
+         "apicvr.dk is free with no API key and no fixed daily quota. cvrapi.dk gives 50 free lookups a day, "
+         "and cvr.dev is a paid API with financial data. See the <a href=\"/en/guides/cvr-api-comparison\">full "
+         "comparison</a> or the <a href=\"/en/guides/migrate-from-cvrapi-dk\">guide to switching from cvrapi.dk</a>."),
         ("Can I use the data for marketing?",
          "Only for companies without marketing protection. The <code>protected</code> field is "
          "<code>true</code> when a company has opted out of marketing, under sections 19 and 22 of the "
