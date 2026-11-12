@@ -35,7 +35,7 @@ from app.modules.kapitalsog import show_capital_result
 from app.modules import api_reference, guides
 from app.modules.homepage_content import CONTENT as HOMEPAGE_CONTENT, ENDPOINTS as HOMEPAGE_ENDPOINTS
 from app.modules.site_ui import UI
-from app.modules.stats import get_public_stats, get_stats, init_db, log_request
+from app.modules.stats import get_domain_requests, get_public_stats, get_stats, init_db, log_request
 
 
 init_db()
@@ -616,6 +616,11 @@ async def kapitalindsigt_page(request: Request, cvrNumber: str):
 @app.get("/stats", include_in_schema=False)
 async def stats_dashboard(request: Request, _: bool = Depends(verify_stats_auth)):
     return templates.TemplateResponse("/stats.html", {"request": request, "stats": await run_in_threadpool(get_stats)})
+
+
+@app.get("/stats/domains/{domain}", include_in_schema=False)
+async def stats_domain_requests(domain: str, _: bool = Depends(verify_stats_auth)):
+    return await run_in_threadpool(get_domain_requests, domain)
 
 
 # --- SEO / crawler files ---------------------------------------------------

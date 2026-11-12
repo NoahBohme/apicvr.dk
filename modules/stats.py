@@ -44,11 +44,23 @@ def init_db():
                 conn.execute(f"ALTER TABLE request_log ADD COLUMN {col} {coltype}")
             except sqlite3.OperationalError:
                 pass
+        # Calling domain per request (from Referer, else Origin), so the
+        # dashboard can list one domain's requests via an index.
+        try:
+            conn.execute("ALTER TABLE request_log ADD COLUMN domain TEXT")
+        except sqlite3.OperationalError:
+            pass
+        else:
+            # One-off: derive it for historical rows from the stored referer.
+            conn.create_function("domain_of", 1, _domain_of, deterministic=True)
+            conn.execute(
+                "UPDATE request_log SET domain = domain_of(referer) WHERE referer IS NOT NULL"
+            )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_domain_timestamp ON request_log(domain, timestamp)"
+        )
         # Running per-domain totals, kept up to date by log_request so the
         # dashboard never has to scan request_log to answer "who calls us".
-        created = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='caller_domains'"
-        ).fetchone() is None
         conn.execute("""
             CREATE TABLE IF NOT EXISTS caller_domains (
                 domain TEXT PRIMARY KEY,
@@ -57,8 +69,14 @@ def init_db():
                 last_seen TEXT NOT NULL
             )
         """)
-        if created:
-            _backfill_caller_domains(conn)
+        if conn.execute("SELECT 1 FROM caller_domains LIMIT 1").fetchone() is None:
+            conn.execute(
+                """
+                INSERT INTO caller_domains (domain, count, first_seen, last_seen)
+                SELECT domain, COUNT(*), MIN(timestamp), MAX(timestamp)
+                FROM request_log WHERE domain IS NOT NULL GROUP BY domain
+                """
+            )
 
 
 def _domain_of(url):
@@ -70,32 +88,6 @@ def _domain_of(url):
     except ValueError:
         return None
     return host or None
-
-
-def _backfill_caller_domains(conn):
-    """One-off seed of caller_domains from historical referers."""
-    totals = {}
-    rows = conn.execute(
-        """
-        SELECT referer, COUNT(*) AS n, MIN(timestamp) AS first, MAX(timestamp) AS last
-        FROM request_log WHERE referer IS NOT NULL GROUP BY referer
-        """
-    )
-    for r in rows:
-        domain = _domain_of(r["referer"])
-        if not domain:
-            continue
-        cur = totals.get(domain)
-        if cur is None:
-            totals[domain] = [r["n"], r["first"], r["last"]]
-        else:
-            cur[0] += r["n"]
-            cur[1] = min(cur[1], r["first"])
-            cur[2] = max(cur[2], r["last"])
-    conn.executemany(
-        "INSERT INTO caller_domains (domain, count, first_seen, last_seen) VALUES (?, ?, ?, ?)",
-        [(d, n, first, last) for d, (n, first, last) in totals.items()],
-    )
 
 
 @contextmanager
@@ -116,8 +108,8 @@ def log_request(method: str, path: str, status_code: int, response_time_ms: floa
     domain = _domain_of(referer) or _domain_of(origin)
     with _get_conn() as conn:
         conn.execute(
-            "INSERT INTO request_log (timestamp, method, path, status_code, response_time_ms, ip, referer) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (ts, method, path, status_code, round(response_time_ms, 2), ip, referer or None),
+            "INSERT INTO request_log (timestamp, method, path, status_code, response_time_ms, ip, referer, domain) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (ts, method, path, status_code, round(response_time_ms, 2), ip, referer or None, domain),
         )
         if domain:
             conn.execute(
@@ -275,19 +267,14 @@ def get_stats() -> dict:
         ).fetchall()
 
         own = sorted(_OWN_HOSTS)
-
-        def caller_domains(order_by):
-            return conn.execute(
-                f"""
-                SELECT domain, count, first_seen, last_seen FROM caller_domains
-                WHERE domain NOT IN ({",".join("?" * len(own))})
-                ORDER BY {order_by} LIMIT 100
-                """,
-                own,
-            ).fetchall()
-
-        domains_recent = caller_domains("last_seen DESC")
-        domains_top = caller_domains("count DESC")
+        caller_domains = conn.execute(
+            f"""
+            SELECT domain, count, first_seen, last_seen FROM caller_domains
+            WHERE domain NOT IN ({",".join("?" * len(own))})
+            ORDER BY last_seen DESC LIMIT 2000
+            """,
+            own,
+        ).fetchall()
 
         return {
             "today": today_count,
@@ -323,9 +310,34 @@ def get_stats() -> dict:
             "top_referers_today": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_today],
             "top_referers_week": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_week],
             "top_referers_month": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_month],
-            "domains_recent": [dict(r) for r in domains_recent],
-            "domains_top": [dict(r) for r in domains_top],
+            "caller_domains": [dict(r) for r in caller_domains],
         }
+
+
+def get_domain_requests(domain: str, limit: int = 500) -> dict:
+    """Latest requests from one calling domain, plus a per-IP breakdown."""
+    with _get_conn() as conn:
+        requests = conn.execute(
+            """
+            SELECT timestamp, method, path, status_code, response_time_ms, ip, referer
+            FROM request_log WHERE domain = ?
+            ORDER BY timestamp DESC LIMIT ?
+            """,
+            (domain, limit),
+        ).fetchall()
+        ips = conn.execute(
+            """
+            SELECT ip, COUNT(*) AS count, MAX(timestamp) AS last_seen
+            FROM request_log WHERE domain = ?
+            GROUP BY ip ORDER BY count DESC LIMIT 100
+            """,
+            (domain,),
+        ).fetchall()
+    return {
+        "domain": domain,
+        "requests": [dict(r) for r in requests],
+        "ips": [dict(r) for r in ips],
+    }
 
 
 def get_public_stats():

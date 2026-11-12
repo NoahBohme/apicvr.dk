@@ -215,6 +215,33 @@
             color: #546e7a;
         }
 
+        /* Calling domains */
+        .filter-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.9em;
+            background: #fff;
+            color: #37474f;
+        }
+        .filter-input.small { width: auto; min-width: 260px; margin: 0; }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable.sorted-asc::after { content: " \25B2"; font-size: 0.7em; }
+        th.sortable.sorted-desc::after { content: " \25BC"; font-size: 0.7em; }
+        .domain-row { cursor: pointer; }
+        .domain-row.open { background: #f1f8e9; }
+        .domain-detail > td { background: #fafafa; padding: 16px 12px; }
+        .domain-detail h4 { text-align: left; margin: 0 0 8px; font-size: 0.85em; color: #546e7a; }
+        .domain-detail-grid { display: grid; grid-template-columns: minmax(220px, 1fr) 3fr; gap: 24px; align-items: start; }
+        .domain-detail-toolbar { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .domain-detail table { font-size: 0.9em; }
+        .domain-detail .scroll { max-height: 420px; overflow: auto; }
+        .ip-link { cursor: pointer; text-decoration: underline dotted; }
+        @media (max-width: 800px) { .domain-detail-grid { grid-template-columns: 1fr; } }
+
         .empty {
             color: #b0bec5;
             font-size: 0.9em;
@@ -525,40 +552,32 @@
         </div>
 
         <!-- Calling domains (all time) -->
-        <div class="endpoints-section" style="margin-top: 24px;">
+        <div class="endpoints-section" id="domains-section" style="margin-top: 24px;">
             <div class="endpoints-header">
-                <h3>Calling domains <span style="font-weight: 400; color: #90a4ae;">(all time, from Referer/Origin)</span></h3>
-                <div class="tab-btns">
-                    <button class="tab-btn active" onclick="showTabGroup('dom', 'recent', this)">Most recent</button>
-                    <button class="tab-btn" onclick="showTabGroup('dom', 'top', this)">Most calls</button>
-                </div>
+                <h3>Calling domains <span style="font-weight: 400; color: #90a4ae;">(all time, from Referer/Origin &mdash; click a row for its requests)</span></h3>
             </div>
-            {% if stats.domains_top %}
-            {% set max_v = stats.domains_top[0].count %}
-            <div class="tab-panel active" id="dom-tab-recent">
-                <table><thead><tr><th>Domain</th><th>Calls</th><th>Last call (UTC)</th><th>First seen</th></tr></thead><tbody>
-                {% for r in stats.domains_recent %}
-                    <tr>
-                        <td><span class="path" style="word-break: break-all;">{{ r.domain }}</span></td>
-                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2e7d32;"></div><span class="count-num">{{ r.count }}</span></div></td>
-                        <td><span class="path">{{ r.last_seen }}</span></td>
-                        <td><span class="path">{{ r.first_seen[:10] }}</span></td>
-                    </tr>
+            {% if stats.caller_domains %}
+            <input type="search" id="domain-filter" class="filter-input" placeholder="Filter domains&hellip;" oninput="filterDomains()">
+            <table id="domains-table">
+                <thead><tr>
+                    <th class="sortable" data-sort="domain">Domain</th>
+                    <th class="sortable" data-sort="count">Calls</th>
+                    <th class="sortable sorted-desc" data-sort="last">Last call (UTC)</th>
+                    <th class="sortable" data-sort="first">First seen</th>
+                </tr></thead>
+                <tbody>
+                {% set max_v = stats.caller_domains | map(attribute='count') | max %}
+                {% for r in stats.caller_domains %}
+                <tr class="domain-row" data-domain="{{ r.domain }}" data-count="{{ r.count }}" data-last="{{ r.last_seen }}" data-first="{{ r.first_seen }}" onclick="toggleDomain(this)">
+                    <td><span class="path" style="word-break: break-all;">{{ r.domain }}</span></td>
+                    <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2e7d32;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                    <td><span class="path">{{ r.last_seen }}</span></td>
+                    <td><span class="path">{{ r.first_seen[:10] }}</span></td>
+                </tr>
                 {% endfor %}
-                </tbody></table>
-            </div>
-            <div class="tab-panel" id="dom-tab-top">
-                <table><thead><tr><th>Domain</th><th>Calls</th><th>Last call (UTC)</th><th>First seen</th></tr></thead><tbody>
-                {% for r in stats.domains_top %}
-                    <tr>
-                        <td><span class="path" style="word-break: break-all;">{{ r.domain }}</span></td>
-                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2e7d32;"></div><span class="count-num">{{ r.count }}</span></div></td>
-                        <td><span class="path">{{ r.last_seen }}</span></td>
-                        <td><span class="path">{{ r.first_seen[:10] }}</span></td>
-                    </tr>
-                {% endfor %}
-                </tbody></table>
-            </div>
+                </tbody>
+            </table>
+            <p class="empty" id="domain-filter-empty" style="display: none;">No domains match.</p>
             {% else %}<p class="empty">No calling domains recorded yet.</p>{% endif %}
         </div>
 
@@ -581,6 +600,129 @@
             section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(group + '-tab-' + period).classList.add('active');
             btn.classList.add('active');
+        }
+
+        // Calling domains: filter, sort, expand
+        function filterDomains() {
+            const q = document.getElementById('domain-filter').value.trim().toLowerCase();
+            let shown = 0;
+            document.querySelectorAll('#domains-table .domain-row').forEach(row => {
+                const match = row.dataset.domain.toLowerCase().includes(q);
+                row.style.display = match ? '' : 'none';
+                if (!match && row.nextElementSibling?.classList.contains('domain-detail')) {
+                    row.nextElementSibling.remove();
+                    row.classList.remove('open');
+                }
+                if (match) shown++;
+            });
+            document.getElementById('domain-filter-empty').style.display = shown ? 'none' : '';
+        }
+
+        document.querySelectorAll('#domains-table th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sort;
+                const desc = !th.classList.contains('sorted-desc');
+                th.parentElement.querySelectorAll('th').forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+                th.classList.add(desc ? 'sorted-desc' : 'sorted-asc');
+                const tbody = document.querySelector('#domains-table tbody');
+                const rows = [...tbody.querySelectorAll('.domain-row')];
+                rows.sort((a, b) => {
+                    const x = a.dataset[key], y = b.dataset[key];
+                    const cmp = key === 'count' ? x - y : x.localeCompare(y);
+                    return desc ? -cmp : cmp;
+                });
+                rows.forEach(row => {
+                    const detail = row.nextElementSibling?.classList.contains('domain-detail') ? row.nextElementSibling : null;
+                    tbody.appendChild(row);
+                    if (detail) tbody.appendChild(detail);
+                });
+            });
+        });
+
+        function el(tag, attrs = {}, ...children) {
+            const node = document.createElement(tag);
+            Object.assign(node, attrs);
+            children.forEach(c => node.append(c));
+            return node;
+        }
+
+        async function toggleDomain(row) {
+            const next = row.nextElementSibling;
+            if (next?.classList.contains('domain-detail')) {
+                next.remove();
+                row.classList.remove('open');
+                return;
+            }
+            row.classList.add('open');
+            const cell = el('td', { colSpan: 4 }, el('p', { className: 'empty', textContent: 'Loading…' }));
+            row.after(el('tr', { className: 'domain-detail' }, cell));
+
+            let data;
+            try {
+                const res = await fetch('/stats/domains/' + encodeURIComponent(row.dataset.domain), { credentials: 'same-origin' });
+                if (!res.ok) throw new Error(res.status);
+                data = await res.json();
+            } catch (e) {
+                cell.replaceChildren(el('p', { className: 'empty', textContent: 'Could not load requests (' + e.message + ').' }));
+                return;
+            }
+            cell.replaceChildren(renderDomainDetail(data));
+        }
+
+        function renderDomainDetail(data) {
+            const filter = el('input', { type: 'search', className: 'filter-input small', placeholder: 'Filter by IP, path, method or status…' });
+            const counter = el('span', { className: 'path' });
+            const tbody = el('tbody');
+            const rows = data.requests.map(r => {
+                const tr = el('tr', {},
+                    el('td', {}, el('span', { className: 'path', textContent: r.timestamp })),
+                    el('td', {}, el('span', { className: 'path', textContent: r.method })),
+                    el('td', {}, el('span', { className: 'path', style: 'word-break: break-all;', textContent: r.path, title: r.referer || '' })),
+                    el('td', {}, el('span', { className: 'path', textContent: r.status_code ?? '' })),
+                    el('td', {}, el('span', { className: 'path', textContent: r.ip ?? '' })),
+                    el('td', {}, el('span', { className: 'path', textContent: r.response_time_ms != null ? r.response_time_ms + ' ms' : '' })),
+                );
+                tr.dataset.search = [r.ip, r.path, r.method, r.status_code].join(' ').toLowerCase();
+                tbody.append(tr);
+                return tr;
+            });
+            const applyFilter = () => {
+                const q = filter.value.trim().toLowerCase();
+                let shown = 0;
+                rows.forEach(tr => {
+                    const match = tr.dataset.search.includes(q);
+                    tr.style.display = match ? '' : 'none';
+                    if (match) shown++;
+                });
+                counter.textContent = shown + ' of ' + rows.length + ' latest requests';
+            };
+            filter.addEventListener('input', applyFilter);
+            applyFilter();
+
+            const ipBody = el('tbody');
+            data.ips.forEach(r => {
+                const ip = el('span', { className: 'path ip-link', textContent: r.ip ?? '(none)', title: 'Show only this IP' });
+                ip.addEventListener('click', () => { filter.value = r.ip ?? ''; applyFilter(); });
+                ipBody.append(el('tr', {},
+                    el('td', {}, ip),
+                    el('td', {}, el('span', { className: 'count-num', textContent: r.count })),
+                    el('td', {}, el('span', { className: 'path', textContent: r.last_seen })),
+                ));
+            });
+
+            const head = (...cols) => el('thead', {}, el('tr', {}, ...cols.map(c => el('th', { textContent: c }))));
+            return el('div', { className: 'domain-detail-grid' },
+                el('div', {},
+                    el('h4', { textContent: 'IPs (' + data.ips.length + ')' }),
+                    el('div', { className: 'scroll' }, el('table', {}, head('IP', 'Requests', 'Last'), ipBody)),
+                ),
+                el('div', {},
+                    el('div', { className: 'domain-detail-toolbar' }, filter, counter),
+                    rows.length
+                        ? el('div', { className: 'scroll' }, el('table', {}, head('Time (UTC)', 'Method', 'Path', 'Status', 'IP', 'Time'), tbody))
+                        : el('p', { className: 'empty', textContent: 'No individual requests stored for this domain.' }),
+                ),
+            );
         }
 
         const chartDefaults = {
