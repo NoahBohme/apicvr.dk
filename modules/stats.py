@@ -4,8 +4,17 @@ import threading
 import time
 from datetime import datetime, timezone, timedelta
 from contextlib import contextmanager
+from urllib.parse import urlsplit
 
 DB_PATH = os.getenv("STATS_DB_PATH", "stats.db")
+
+# Our own host shows up as the referer on internal navigation; hide it from
+# the "calling domains" list so external callers aren't drowned out.
+_OWN_HOSTS = {
+    h for h in (urlsplit(os.getenv("SITE_URL", "https://apicvr.dk")).hostname or "",)
+    if h
+}
+_OWN_HOSTS |= {f"www.{h}" for h in _OWN_HOSTS if not h.startswith("www.")}
 
 _PUBLIC_STATS_TTL = 600  # seconds
 _public_stats_cache = {"at": 0.0, "data": None}
@@ -35,6 +44,58 @@ def init_db():
                 conn.execute(f"ALTER TABLE request_log ADD COLUMN {col} {coltype}")
             except sqlite3.OperationalError:
                 pass
+        # Running per-domain totals, kept up to date by log_request so the
+        # dashboard never has to scan request_log to answer "who calls us".
+        created = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='caller_domains'"
+        ).fetchone() is None
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS caller_domains (
+                domain TEXT PRIMARY KEY,
+                count INTEGER NOT NULL,
+                first_seen TEXT NOT NULL,
+                last_seen TEXT NOT NULL
+            )
+        """)
+        if created:
+            _backfill_caller_domains(conn)
+
+
+def _domain_of(url):
+    """Hostname from a Referer/Origin header value, or None."""
+    if not url:
+        return None
+    try:
+        host = urlsplit(url if "//" in url else f"//{url}").hostname
+    except ValueError:
+        return None
+    return host or None
+
+
+def _backfill_caller_domains(conn):
+    """One-off seed of caller_domains from historical referers."""
+    totals = {}
+    rows = conn.execute(
+        """
+        SELECT referer, COUNT(*) AS n, MIN(timestamp) AS first, MAX(timestamp) AS last
+        FROM request_log WHERE referer IS NOT NULL GROUP BY referer
+        """
+    )
+    for r in rows:
+        domain = _domain_of(r["referer"])
+        if not domain:
+            continue
+        cur = totals.get(domain)
+        if cur is None:
+            totals[domain] = [r["n"], r["first"], r["last"]]
+        else:
+            cur[0] += r["n"]
+            cur[1] = min(cur[1], r["first"])
+            cur[2] = max(cur[2], r["last"])
+    conn.executemany(
+        "INSERT INTO caller_domains (domain, count, first_seen, last_seen) VALUES (?, ?, ?, ?)",
+        [(d, n, first, last) for d, (n, first, last) in totals.items()],
+    )
 
 
 @contextmanager
@@ -48,13 +109,24 @@ def _get_conn():
         conn.close()
 
 
-def log_request(method: str, path: str, status_code: int, response_time_ms: float, ip: str = None, referer: str = None):
+def log_request(method: str, path: str, status_code: int, response_time_ms: float, ip: str = None, referer: str = None, origin: str = None):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    # Browsers with a strict referrer policy omit Referer on cross-origin
+    # fetches but still send Origin, so fall back to it for the domain.
+    domain = _domain_of(referer) or _domain_of(origin)
     with _get_conn() as conn:
         conn.execute(
             "INSERT INTO request_log (timestamp, method, path, status_code, response_time_ms, ip, referer) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (ts, method, path, status_code, round(response_time_ms, 2), ip, referer or None),
         )
+        if domain:
+            conn.execute(
+                """
+                INSERT INTO caller_domains (domain, count, first_seen, last_seen) VALUES (?, 1, ?, ?)
+                ON CONFLICT(domain) DO UPDATE SET count = count + 1, last_seen = excluded.last_seen
+                """,
+                (domain, ts, ts),
+            )
 
 
 def get_stats() -> dict:
@@ -202,6 +274,21 @@ def get_stats() -> dict:
             (month_start, next_month_start),
         ).fetchall()
 
+        own = sorted(_OWN_HOSTS)
+
+        def caller_domains(order_by):
+            return conn.execute(
+                f"""
+                SELECT domain, count, first_seen, last_seen FROM caller_domains
+                WHERE domain NOT IN ({",".join("?" * len(own))})
+                ORDER BY {order_by} LIMIT 100
+                """,
+                own,
+            ).fetchall()
+
+        domains_recent = caller_domains("last_seen DESC")
+        domains_top = caller_domains("count DESC")
+
         return {
             "today": today_count,
             "week": week_count,
@@ -236,6 +323,8 @@ def get_stats() -> dict:
             "top_referers_today": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_today],
             "top_referers_week": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_week],
             "top_referers_month": [{"referer": r["referer"], "count": r["count"]} for r in top_referers_month],
+            "domains_recent": [dict(r) for r in domains_recent],
+            "domains_top": [dict(r) for r in domains_top],
         }
 
 

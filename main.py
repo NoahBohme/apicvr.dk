@@ -84,6 +84,7 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
             elapsed_ms,
             ip=ip,
             referer=referer,
+            origin=request.headers.get("origin"),
         )
         return response
 

@@ -524,6 +524,44 @@
 
         </div>
 
+        <!-- Calling domains (all time) -->
+        <div class="endpoints-section" style="margin-top: 24px;">
+            <div class="endpoints-header">
+                <h3>Calling domains <span style="font-weight: 400; color: #90a4ae;">(all time, from Referer/Origin)</span></h3>
+                <div class="tab-btns">
+                    <button class="tab-btn active" onclick="showTabGroup('dom', 'recent', this)">Most recent</button>
+                    <button class="tab-btn" onclick="showTabGroup('dom', 'top', this)">Most calls</button>
+                </div>
+            </div>
+            {% if stats.domains_top %}
+            {% set max_v = stats.domains_top[0].count %}
+            <div class="tab-panel active" id="dom-tab-recent">
+                <table><thead><tr><th>Domain</th><th>Calls</th><th>Last call (UTC)</th><th>First seen</th></tr></thead><tbody>
+                {% for r in stats.domains_recent %}
+                    <tr>
+                        <td><span class="path" style="word-break: break-all;">{{ r.domain }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2e7d32;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                        <td><span class="path">{{ r.last_seen }}</span></td>
+                        <td><span class="path">{{ r.first_seen[:10] }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody></table>
+            </div>
+            <div class="tab-panel" id="dom-tab-top">
+                <table><thead><tr><th>Domain</th><th>Calls</th><th>Last call (UTC)</th><th>First seen</th></tr></thead><tbody>
+                {% for r in stats.domains_top %}
+                    <tr>
+                        <td><span class="path" style="word-break: break-all;">{{ r.domain }}</span></td>
+                        <td><div class="bar-cell"><div class="bar" style="width: {{ [((r.count / max_v) * 120) | int, 4] | max }}px; background: #2e7d32;"></div><span class="count-num">{{ r.count }}</span></div></td>
+                        <td><span class="path">{{ r.last_seen }}</span></td>
+                        <td><span class="path">{{ r.first_seen[:10] }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody></table>
+            </div>
+            {% else %}<p class="empty">No calling domains recorded yet.</p>{% endif %}
+        </div>
+
         <footer>Auto-refreshes on page reload &mdash; data stored in SQLite</footer>
     </div>
 
@@ -538,13 +576,10 @@
 
         // Tab switching (ip/ref groups)
         function showTabGroup(group, period, btn) {
-            const prefix = group + '-tab-';
-            ['today','week','month'].forEach(p => {
-                const el = document.getElementById(prefix + p);
-                if (el) el.classList.remove('active');
-            });
-            btn.closest('.endpoints-section').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(prefix + period).classList.add('active');
+            const section = btn.closest('.endpoints-section');
+            section.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(group + '-tab-' + period).classList.add('active');
             btn.classList.add('active');
         }
 
